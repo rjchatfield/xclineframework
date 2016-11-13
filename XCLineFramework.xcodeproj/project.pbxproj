@@ -10,7 +10,7 @@
 		OBJ_23 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_9 /* Extensions.swift */; };
 		OBJ_24 /* Line+ExpandRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_10 /* Line+ExpandRegion.swift */; };
 		OBJ_25 /* Line.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_11 /* Line.swift */; };
-		OBJ_32 /* XCLineFrameworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_14 /* XCLineFrameworkTests.swift */; };
+		OBJ_32 /* ExpandRegionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_14 /* ExpandRegionTests.swift */; };
 		OBJ_34 /* XCLineFramework.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = OBJ_16 /* XCLineFramework.framework */; };
 /* End PBXBuildFile section */
 
@@ -27,7 +27,7 @@
 /* Begin PBXFileReference section */
 		OBJ_10 /* Line+ExpandRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Line+ExpandRegion.swift"; sourceTree = "<group>"; };
 		OBJ_11 /* Line.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Line.swift; sourceTree = "<group>"; };
-		OBJ_14 /* XCLineFrameworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XCLineFrameworkTests.swift; sourceTree = "<group>"; };
+		OBJ_14 /* ExpandRegionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandRegionTests.swift; sourceTree = "<group>"; };
 		OBJ_16 /* XCLineFramework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = XCLineFramework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		OBJ_17 /* XCLineFrameworkTests.xctest */ = {isa = PBXFileReference; lastKnownFileType = file; path = XCLineFrameworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		OBJ_6 /* Package.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
@@ -64,7 +64,7 @@
 		OBJ_13 /* XCLineFrameworkTests */ = {
 			isa = PBXGroup;
 			children = (
-				OBJ_14 /* XCLineFrameworkTests.swift */,
+				OBJ_14 /* ExpandRegionTests.swift */,
 			);
 			name = XCLineFrameworkTests;
 			path = Tests/XCLineFrameworkTests;
@@ -79,7 +79,7 @@
 			name = Products;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		OBJ_5 /*  */ = {
+		OBJ_5 = {
 			isa = PBXGroup;
 			children = (
 				OBJ_6 /* Package.swift */,
@@ -87,7 +87,6 @@
 				OBJ_12 /* Tests */,
 				OBJ_15 /* Products */,
 			);
-			name = "";
 			sourceTree = "<group>";
 		};
 		OBJ_7 /* Sources */ = {
@@ -160,7 +159,7 @@
 			knownRegions = (
 				en,
 			);
-			mainGroup = OBJ_5 /*  */;
+			mainGroup = OBJ_5;
 			productRefGroup = OBJ_15 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -186,7 +185,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 0;
 			files = (
-				OBJ_32 /* XCLineFrameworkTests.swift in Sources */,
+				OBJ_32 /* ExpandRegionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -10,8 +10,11 @@ extension Line {
         return result
     }
     
-    // MARK: - Helper methods
-    
+}
+
+// MARK: - Helper methods
+
+private extension Line {
     var leftBoundary: UnicodeScalar? {
         guard start > 0 else { return nil }
         guard let index = chars.index(chars.startIndex, offsetBy: start - 1, limitedBy: chars.endIndex) else { return nil }
@@ -28,7 +31,7 @@ extension Line {
         if includeQuotes { boundaries = boundaries.union(.quotes) }
         if includeComma { boundaries = boundaries.union(.comma) }
         if includeColon { boundaries = boundaries.union(.colon) }
-        if let i = reversedStartChars.indexOf(cond: boundaries.contains, ignoringConds: flipped(ignoringConds)) {
+        if let i = reversedStartChars.indexOf(cond: boundaries.contains, ignoringConds: ignoringCondsFlipped) {
             return start - reversedStartChars.distance(from: reversedStartChars.startIndex, to: i)
         }
         return 0
@@ -236,8 +239,8 @@ extension Line {
     
 }
 
-typealias Condition = (UnicodeScalar) -> Bool
-typealias IgnoringCondition = (shouldStart: Condition, shouldStop: Condition)
+private typealias Condition = (UnicodeScalar) -> Bool
+private typealias IgnoringCondition = (shouldStart: Condition, shouldStop: Condition)
 
 private let ignoringConds: [IgnoringCondition] = [
     ({ $0 == "[" }, { $0 == "]" }) as IgnoringCondition,
@@ -246,6 +249,48 @@ private let ignoringConds: [IgnoringCondition] = [
     ({ $0 == "<" }, { $0 == ">" }) as IgnoringCondition,
 ]
 
-private func flipped(_ ignoringConditions: [IgnoringCondition]) -> [IgnoringCondition] {
-    return ignoringConditions.map { cond in (cond.1, cond.0) }
+private let ignoringCondsFlipped: [IgnoringCondition] = ignoringConds.map { cond in (cond.1, cond.0) }
+
+// MARK: - Extensions
+
+private extension Collection where Self.Iterator.Element == UnicodeScalar {
+    
+    func indexOf(cond: Condition, ignoringConds: [IgnoringCondition]) -> Index? {
+        var ignoringCond: IgnoringCondition?
+        return index(where: { (scalar) -> Bool in
+            if ignoringCond == nil && cond(scalar) { return true }
+            if ignoringCond == nil {
+                for cond in ignoringConds where cond.shouldStart(scalar) { ignoringCond = cond }
+            }
+            if let _ignoringCond = ignoringCond, _ignoringCond.shouldStop(scalar) { ignoringCond = nil }
+            return false
+        })
+    }
+    
+}
+
+private extension CharacterSet {
+    
+    static let swiftSyntax = CharacterSet(charactersIn: ":,.")
+    static let allBoundaries = CharacterSet(charactersIn: Line.rules
+        .map { $0.value }
+        .joined(separator: ""))
+    static let quotes = CharacterSet(charactersIn: "\"")
+    static let colon = CharacterSet(charactersIn: ":")
+    static let comma = CharacterSet(charactersIn: ",")
+    static let colonAndCommar = CharacterSet.colon.union(.comma)
+    static let leftBoundaries = CharacterSet(charactersIn: "(<[{")
+    static let leftBoundariesWithQuotes = CharacterSet.leftBoundaries
+        .union(.quotes)
+    static let rightBoundaries = CharacterSet(charactersIn: ")>]}")
+    static let rightBoundariesWithQuotes = CharacterSet.rightBoundaries
+        .union(.quotes)
+    static let allBoundariesAndSpace = CharacterSet(charactersIn: " ")
+        .union(.swiftSyntax)
+        .union(.allBoundaries)
+    
+    func doesNotContain(_ member: UnicodeScalar) -> Bool {
+        return !contains(member)
+    }
+    
 }

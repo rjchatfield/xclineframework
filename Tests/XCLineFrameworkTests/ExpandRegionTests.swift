@@ -1,7 +1,7 @@
 import XCTest
 @testable import XCLineFramework
 
-final class XCLineTests: XCTestCase {
+final class ExpandRegionTests: XCTestCase {
     
     /// For Linux tests
     static var allTests : [(String, (XCLineTests) -> () throws -> Void)] {
@@ -15,6 +15,7 @@ final class XCLineTests: XCTestCase {
             ("testPairs_dict", testPairs_dict),
             ("testPairs_generics", testPairs_generics),
             ("testCase", testCase),
+            ("testAssign", testAssign),
         ]
     }
     
@@ -243,6 +244,16 @@ final class XCLineTests: XCTestCase {
             .expands(to: "case (|_?, nil|): return .orderedAscending")
             .expands(to: "case |(_?, nil)|: return .orderedAscending")
             .expands(to: "|case (_?, nil): return .orderedAscending|")
+    }
+    
+    func testAssign() {
+        _expect(thatThis: "let new.line = cu|rrentLine.expandRegion()")
+            .expands(to: "let new.line = |currentLine|.expandRegion()")
+            .expands(to: "let new.line = |currentLine.expandRegion()|")
+
+        _expect(thatThis: "let ne|w.line = currentLine.expandRegion()")
+            .expands(to: "let |new|.line = currentLine.expandRegion()")
+            .expands(to: "let |new.line| = currentLine.expandRegion()")
     }
     
 }
