@@ -7,72 +7,74 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		OBJ_22 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_9 /* Extensions.swift */; };
-		OBJ_23 /* Line.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_10 /* Line.swift */; };
-		OBJ_30 /* XCLineFrameworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_13 /* XCLineFrameworkTests.swift */; };
-		OBJ_32 /* XCLineFramework.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = OBJ_15 /* XCLineFramework.framework */; };
+		OBJ_23 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_9 /* Extensions.swift */; };
+		OBJ_24 /* Line+ExpandRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_10 /* Line+ExpandRegion.swift */; };
+		OBJ_25 /* Line.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_11 /* Line.swift */; };
+		OBJ_32 /* XCLineFrameworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_14 /* XCLineFrameworkTests.swift */; };
+		OBJ_34 /* XCLineFramework.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = OBJ_16 /* XCLineFramework.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		3F87FFA81DD8246D00152E91 /* PBXContainerItemProxy */ = {
+		3F87FFAF1DD827DC00152E91 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = OBJ_1 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = OBJ_17;
+			remoteGlobalIDString = OBJ_18;
 			remoteInfo = XCLineFramework;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		OBJ_10 /* Line.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Line.swift; sourceTree = "<group>"; };
-		OBJ_13 /* XCLineFrameworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XCLineFrameworkTests.swift; sourceTree = "<group>"; };
-		OBJ_15 /* XCLineFramework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = XCLineFramework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		OBJ_16 /* XCLineFrameworkTests.xctest */ = {isa = PBXFileReference; lastKnownFileType = file; path = XCLineFrameworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		OBJ_10 /* Line+ExpandRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Line+ExpandRegion.swift"; sourceTree = "<group>"; };
+		OBJ_11 /* Line.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Line.swift; sourceTree = "<group>"; };
+		OBJ_14 /* XCLineFrameworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XCLineFrameworkTests.swift; sourceTree = "<group>"; };
+		OBJ_16 /* XCLineFramework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = XCLineFramework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		OBJ_17 /* XCLineFrameworkTests.xctest */ = {isa = PBXFileReference; lastKnownFileType = file; path = XCLineFrameworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		OBJ_6 /* Package.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
 		OBJ_9 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		OBJ_24 /* Frameworks */ = {
+		OBJ_26 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 0;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		OBJ_31 /* Frameworks */ = {
+		OBJ_33 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 0;
 			files = (
-				OBJ_32 /* XCLineFramework.framework in Frameworks */,
+				OBJ_34 /* XCLineFramework.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		OBJ_11 /* Tests */ = {
+		OBJ_12 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				OBJ_12 /* XCLineFrameworkTests */,
+				OBJ_13 /* XCLineFrameworkTests */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
 		};
-		OBJ_12 /* XCLineFrameworkTests */ = {
+		OBJ_13 /* XCLineFrameworkTests */ = {
 			isa = PBXGroup;
 			children = (
-				OBJ_13 /* XCLineFrameworkTests.swift */,
+				OBJ_14 /* XCLineFrameworkTests.swift */,
 			);
 			name = XCLineFrameworkTests;
 			path = Tests/XCLineFrameworkTests;
 			sourceTree = SOURCE_ROOT;
 		};
-		OBJ_14 /* Products */ = {
+		OBJ_15 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				OBJ_15 /* XCLineFramework.framework */,
-				OBJ_16 /* XCLineFrameworkTests.xctest */,
+				OBJ_16 /* XCLineFramework.framework */,
+				OBJ_17 /* XCLineFrameworkTests.xctest */,
 			);
 			name = Products;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -82,8 +84,8 @@
 			children = (
 				OBJ_6 /* Package.swift */,
 				OBJ_7 /* Sources */,
-				OBJ_11 /* Tests */,
-				OBJ_14 /* Products */,
+				OBJ_12 /* Tests */,
+				OBJ_15 /* Products */,
 			);
 			name = "";
 			sourceTree = "<group>";
@@ -100,7 +102,8 @@
 			isa = PBXGroup;
 			children = (
 				OBJ_9 /* Extensions.swift */,
-				OBJ_10 /* Line.swift */,
+				OBJ_10 /* Line+ExpandRegion.swift */,
+				OBJ_11 /* Line.swift */,
 			);
 			name = XCLineFramework;
 			path = Sources;
@@ -109,12 +112,12 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		OBJ_17 /* XCLineFramework */ = {
+		OBJ_18 /* XCLineFramework */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = OBJ_18 /* Build configuration list for PBXNativeTarget "XCLineFramework" */;
+			buildConfigurationList = OBJ_19 /* Build configuration list for PBXNativeTarget "XCLineFramework" */;
 			buildPhases = (
-				OBJ_21 /* Sources */,
-				OBJ_24 /* Frameworks */,
+				OBJ_22 /* Sources */,
+				OBJ_26 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -122,24 +125,24 @@
 			);
 			name = XCLineFramework;
 			productName = XCLineFramework;
-			productReference = OBJ_15 /* XCLineFramework.framework */;
+			productReference = OBJ_16 /* XCLineFramework.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		OBJ_25 /* XCLineFrameworkTests */ = {
+		OBJ_27 /* XCLineFrameworkTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = OBJ_26 /* Build configuration list for PBXNativeTarget "XCLineFrameworkTests" */;
+			buildConfigurationList = OBJ_28 /* Build configuration list for PBXNativeTarget "XCLineFrameworkTests" */;
 			buildPhases = (
-				OBJ_29 /* Sources */,
-				OBJ_31 /* Frameworks */,
+				OBJ_31 /* Sources */,
+				OBJ_33 /* Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				OBJ_33 /* PBXTargetDependency */,
+				OBJ_35 /* PBXTargetDependency */,
 			);
 			name = XCLineFrameworkTests;
 			productName = XCLineFrameworkTests;
-			productReference = OBJ_16 /* XCLineFrameworkTests.xctest */;
+			productReference = OBJ_17 /* XCLineFrameworkTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -158,46 +161,47 @@
 				en,
 			);
 			mainGroup = OBJ_5 /*  */;
-			productRefGroup = OBJ_14 /* Products */;
+			productRefGroup = OBJ_15 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				OBJ_17 /* XCLineFramework */,
-				OBJ_25 /* XCLineFrameworkTests */,
+				OBJ_18 /* XCLineFramework */,
+				OBJ_27 /* XCLineFrameworkTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
-		OBJ_21 /* Sources */ = {
+		OBJ_22 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 0;
 			files = (
-				OBJ_22 /* Extensions.swift in Sources */,
-				OBJ_23 /* Line.swift in Sources */,
+				OBJ_23 /* Extensions.swift in Sources */,
+				OBJ_24 /* Line+ExpandRegion.swift in Sources */,
+				OBJ_25 /* Line.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		OBJ_29 /* Sources */ = {
+		OBJ_31 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 0;
 			files = (
-				OBJ_30 /* XCLineFrameworkTests.swift in Sources */,
+				OBJ_32 /* XCLineFrameworkTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		OBJ_33 /* PBXTargetDependency */ = {
+		OBJ_35 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = OBJ_17 /* XCLineFramework */;
-			targetProxy = 3F87FFA81DD8246D00152E91 /* PBXContainerItemProxy */;
+			target = OBJ_18 /* XCLineFramework */;
+			targetProxy = 3F87FFAF1DD827DC00152E91 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		OBJ_19 /* Debug */ = {
+		OBJ_20 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ENABLE_TESTABILITY = YES;
@@ -217,7 +221,7 @@
 			};
 			name = Debug;
 		};
-		OBJ_20 /* Release */ = {
+		OBJ_21 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ENABLE_TESTABILITY = YES;
@@ -237,7 +241,7 @@
 			};
 			name = Release;
 		};
-		OBJ_27 /* Debug */ = {
+		OBJ_29 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
@@ -253,23 +257,6 @@
 				TARGET_NAME = XCLineFrameworkTests;
 			};
 			name = Debug;
-		};
-		OBJ_28 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
-				FRAMEWORK_SEARCH_PATHS = "$(PLATFORM_DIR)/Developer/Library/Frameworks";
-				HEADER_SEARCH_PATHS = "";
-				INFOPLIST_FILE = XCLineFramework.xcodeproj/XCLineFrameworkTests_Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
-				OTHER_LDFLAGS = "$(inherited)";
-				OTHER_SWIFT_FLAGS = "$(inherited)";
-				SUPPORTED_PLATFORMS = macosx;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SWIFT_PACKAGE;
-				SWIFT_VERSION = 3.0;
-				TARGET_NAME = XCLineFrameworkTests;
-			};
-			name = Release;
 		};
 		OBJ_3 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -289,6 +276,23 @@
 				USE_HEADERMAP = NO;
 			};
 			name = Debug;
+		};
+		OBJ_30 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
+				FRAMEWORK_SEARCH_PATHS = "$(PLATFORM_DIR)/Developer/Library/Frameworks";
+				HEADER_SEARCH_PATHS = "";
+				INFOPLIST_FILE = XCLineFramework.xcodeproj/XCLineFrameworkTests_Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
+				OTHER_LDFLAGS = "$(inherited)";
+				OTHER_SWIFT_FLAGS = "$(inherited)";
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SWIFT_PACKAGE;
+				SWIFT_VERSION = 3.0;
+				TARGET_NAME = XCLineFrameworkTests;
+			};
+			name = Release;
 		};
 		OBJ_4 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -310,11 +314,11 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		OBJ_18 /* Build configuration list for PBXNativeTarget "XCLineFramework" */ = {
+		OBJ_19 /* Build configuration list for PBXNativeTarget "XCLineFramework" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				OBJ_19 /* Debug */,
-				OBJ_20 /* Release */,
+				OBJ_20 /* Debug */,
+				OBJ_21 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -328,11 +332,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		OBJ_26 /* Build configuration list for PBXNativeTarget "XCLineFrameworkTests" */ = {
+		OBJ_28 /* Build configuration list for PBXNativeTarget "XCLineFrameworkTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				OBJ_27 /* Debug */,
-				OBJ_28 /* Release */,
+				OBJ_29 /* Debug */,
+				OBJ_30 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "OBJ_17"
+               BlueprintIdentifier = "OBJ_18"
                BuildableName = "XCLineFramework.framework"
                BlueprintName = "XCLineFramework"
                ReferencedContainer = "container:XCLineFramework.xcodeproj">
@@ -32,7 +32,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "OBJ_25"
+               BlueprintIdentifier = "OBJ_27"
                BuildableName = "XCLineFrameworkTests.xctest"
                BlueprintName = "XCLineFrameworkTests"
                ReferencedContainer = "container:XCLineFramework.xcodeproj">
@@ -55,7 +55,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "OBJ_17"
+            BlueprintIdentifier = "OBJ_18"
             BuildableName = "XCLineFramework.framework"
             BlueprintName = "XCLineFramework"
             ReferencedContainer = "container:XCLineFramework.xcodeproj">
