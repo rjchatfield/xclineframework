@@ -1,0 +1,9 @@
+image: swiftdocker/swift
+
+pipelines:
+  default:
+    - step:
+        script:
+          - echo "Testing Swift on the Cloud!"
+          - swift build
+          - swift test
