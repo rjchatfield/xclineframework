@@ -4,7 +4,7 @@ import XCTest
 final class ExpandRegionTests: XCTestCase {
     
     /// For Linux tests
-    static var allTests : [(String, (XCLineTests) -> () throws -> Void)] {
+    static var allTests : [(String, (ExpandRegionTests) -> () throws -> Void)] {
         return [
             ("testWordInHello", testWordInHello),
             ("testWordInQuotes", testWordInQuotes),
@@ -256,9 +256,18 @@ final class ExpandRegionTests: XCTestCase {
             .expands(to: "let |new.line| = currentLine.expandRegion()")
     }
     
+    func testFunctionType() {
+        _expect(thatThis: "func foo(f: @escaping (H|ello) -> World) -> Boom")
+            .expands(to: "func foo(f: @escaping (|Hello|) -> World) -> Boom")
+            .expands(to: "func foo(f: @escaping |(Hello)| -> World) -> Boom")
+            .expands(to: "func foo(f: |@escaping (Hello) -> World|) -> Boom")
+            .expands(to: "func foo(|f: @escaping (Hello) -> World|) -> Boom")
+            .expands(to: "func foo|(f: @escaping (Hello) -> World)| -> Boom")
+    }
+    
 }
 
-extension XCLineTests {
+extension ExpandRegionTests {
     
     @discardableResult
     func assert(_ touple:(initialString: String, expectedString: String), file: String = #file, line: UInt = #line) -> LineTestBuilder {
@@ -314,7 +323,7 @@ extension XCLineTests {
 
 struct LineTestBuilder {
     let string: String?
-    let testCase: XCLineTests
+    let testCase: ExpandRegionTests
     @discardableResult
     func expands(to other: String, file: String = #file, line: UInt = #line) -> LineTestBuilder {
         if let string = string {
