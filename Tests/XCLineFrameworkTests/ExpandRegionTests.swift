@@ -271,8 +271,8 @@ extension ExpandRegionTests {
     
     @discardableResult
     func assert(_ touple:(initialString: String, expectedString: String), file: String = #file, line: UInt = #line) -> LineTestBuilder {
-        let initial = raw(touple.initialString)
-        let expected = raw(touple.expectedString)
+        let initial = makeRaw(touple.initialString)!
+        let expected = makeRaw(touple.expectedString)!
         let result = Line(raw: initial).expandRegion().raw
         let emoji = result == expected ? " 😃" : " 👿"
         let message = "\(initial.before)|\(initial.selected)|\(initial.after)" +
@@ -285,26 +285,6 @@ extension ExpandRegionTests {
             recordFailure(withDescription: message, inFile: file, atLine: line, expected: true)
         }
         return LineTestBuilder(string: touple.expectedString, testCase: self)
-    }
-    
-    func raw(_ string: String) -> Line.Raw {
-        var chars = string.unicodeScalars
-        let first = chars.index(of: "|")!
-        let before = String(chars.prefix(upTo: first))
-        chars = chars[chars.index(after: first)..<chars.endIndex]
-        if let second = chars.index(of: "|") {
-            return (
-                before,
-                String(chars.prefix(upTo: second)),
-                String(chars[chars.index(after: second)..<chars.endIndex])
-            )
-        } else {
-            return (
-                before,
-                "",
-                String(chars)
-            )
-        }
     }
     
     @discardableResult
