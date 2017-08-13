@@ -1,66 +1,109 @@
 import Foundation
 
 public struct Line {
-    public var chars: String.UnicodeScalarView
-    public var start: Int
-    public var end: Int
-}
-
-extension Line {
-    public typealias Raw = (before: String, selected: String, after: String)
+    let string: String
+    public internal(set) var start: Int {
+        didSet {
+            _startIndex = nil
+            _selectedChars = nil
+            _startChars = nil
+        }
+    }
+    public internal(set) var end: Int {
+        didSet {
+            _endIndex = nil
+            _selectedChars = nil
+            _endChars = nil
+        }
+    }
+    
     public init(string: String, start: Int, end: Int) {
-        self.chars = string.unicodeScalars
+        self.string = string
         self.start = start
         self.end = end
     }
+    
+    // CACHED VALUES
+    private var _startIndex: String.Index?
+    private var startIndex: String.Index {
+        mutating get {
+            if _startIndex == nil {
+                _startIndex = string.index(start) ?? string.endIndex
+            }
+            return _startIndex!
+        }
+    }
+    private var _endIndex: String.Index?
+    private var endIndex: String.Index {
+        mutating get {
+            if _endIndex == nil {
+                _endIndex = string.index(end) ?? string.endIndex
+            }
+            return _endIndex!
+        }
+    }
+    
+    private var _selectedChars: Substring?
+    var selectedChars: Substring {
+        mutating get {
+            if _selectedChars == nil {
+                _selectedChars = string[startIndex..<endIndex]
+            }
+            return _selectedChars!
+        }
+    }
+    private var _startChars: Substring?
+    var startChars: Substring {
+        mutating get {
+            if _startChars == nil {
+                _startChars = string[..<startIndex]
+            }
+            return _startChars!
+        }
+    }
+    private var _endChars: Substring?
+    var endChars: Substring {
+        mutating get {
+            if _endChars == nil {
+                _endChars = string[endIndex...]
+            }
+            return _endChars!
+        }
+    }
+}
+
+extension Line {
+    public typealias Raw = (before: Substring, selected: Substring, after: Substring)
     public init(raw: Raw) {
-        self.chars = (raw.before + raw.selected + raw.after).unicodeScalars
-        self.start = raw.before.characters.count
-        self.end = raw.before.characters.count + raw.selected.characters.count
+        self.init(
+            string: String(raw.before + raw.selected + raw.after),
+            start: raw.before.count,
+            end: raw.before.count + raw.selected.count)
     }
     public init?(string: String) {
         guard let raw = makeRaw(string) else { return nil }
         self.init(raw: raw)
     }
-    public var string: String {
-        return String(describing: chars)
-    }
     public var raw: Raw {
-        return String(describing: chars).partition(start: start, end: end)
-    }
-    var startIndex: String.UnicodeScalarView.Index {
-        return chars.index(chars.startIndex, offsetBy: start)
-    }
-    var endIndex: String.UnicodeScalarView.Index {
-        return chars.index(chars.startIndex, offsetBy: end)
-    }
-    var selectedChars: String.UnicodeScalarView {
-        return chars[startIndex..<endIndex]
-    }
-    var startChars: String.UnicodeScalarView {
-        return chars[chars.startIndex..<startIndex]
-    }
-    var endChars: String.UnicodeScalarView {
-        return chars[endIndex..<chars.endIndex]
+        return string.partition(start: start, end: end)
     }
 }
 
-public func makeRaw(_ string: String) -> Line.Raw? {
-    var chars = string.unicodeScalars
-    guard let first = chars.index(of: "|") else { return nil }
-    let before = String(chars.prefix(upTo: first))
-    chars = chars[chars.index(after: first)..<chars.endIndex]
-    if let second = chars.index(of: "|") {
+func makeRaw(_ string: String) -> Line.Raw? {
+    guard let firstDividerIndex = string.index(of: "|") else { return nil }
+    let beforeFirstDivider = string.prefix(upTo: firstDividerIndex)
+    let afterFirstDivider = string[string.index(after: firstDividerIndex)...]
+    if let secondDivider = afterFirstDivider.index(of: "|") {
         return (
-            before,
-            String(chars.prefix(upTo: second)),
-            String(chars[chars.index(after: second)..<chars.endIndex])
+            beforeFirstDivider,
+            afterFirstDivider[..<secondDivider],
+            afterFirstDivider[afterFirstDivider.index(after: secondDivider)...]
         )
     } else {
         return (
-            before,
+            beforeFirstDivider,
             "",
-            String(chars)
+            afterFirstDivider
         )
     }
 }

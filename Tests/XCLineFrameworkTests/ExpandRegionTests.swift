@@ -270,7 +270,7 @@ final class ExpandRegionTests: XCTestCase {
 extension ExpandRegionTests {
     
     @discardableResult
-    func assert(_ touple:(initialString: String, expectedString: String), file: String = #file, line: UInt = #line) -> LineTestBuilder {
+    func assert(_ touple: (initialString: String, expectedString: String), file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
         let initial = makeRaw(touple.initialString)!
         let expected = makeRaw(touple.expectedString)!
         let result = Line(raw: initial).expandRegion().raw
@@ -282,7 +282,7 @@ extension ExpandRegionTests {
         "\(result.before)|\(result.selected)|\(result.after)"
         print(message)
         if result != expected {
-            recordFailure(withDescription: message, inFile: file, atLine: line, expected: true)
+            XCTFail(message, file: file, line: line)
         }
         return LineTestBuilder(string: touple.expectedString, testCase: self)
     }
@@ -305,7 +305,7 @@ struct LineTestBuilder {
     let string: String?
     let testCase: ExpandRegionTests
     @discardableResult
-    func expands(to other: String, file: String = #file, line: UInt = #line) -> LineTestBuilder {
+    func expands(to other: String, file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
         if let string = string {
             return testCase.assert(string => other, file: file, line: line)
         } else {

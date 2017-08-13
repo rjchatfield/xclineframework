@@ -29,7 +29,7 @@
 		OBJ_11 /* Line.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Line.swift; sourceTree = "<group>"; };
 		OBJ_14 /* ExpandRegionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandRegionTests.swift; sourceTree = "<group>"; };
 		OBJ_16 /* XCLineFramework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = XCLineFramework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		OBJ_17 /* XCLineFrameworkTests.xctest */ = {isa = PBXFileReference; lastKnownFileType = file; path = XCLineFrameworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		OBJ_17 /* XCLineFrameworkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = XCLineFrameworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		OBJ_6 /* Package.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
 		OBJ_9 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -151,6 +151,14 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 9999;
+				TargetAttributes = {
+					OBJ_18 = {
+						LastSwiftMigration = 0900;
+					};
+					OBJ_27 = {
+						LastSwiftMigration = 0900;
+					};
+				};
 			};
 			buildConfigurationList = OBJ_2 /* Build configuration list for PBXProject "XCLineFramework" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -208,6 +216,7 @@
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = XCLineFramework.xcodeproj/XCLineFramework_Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(TOOLCHAIN_DIR)/usr/lib/swift/macosx";
+				MACH_O_TYPE = staticlib;
 				OTHER_LDFLAGS = "$(inherited)";
 				OTHER_SWIFT_FLAGS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = XCLineFramework;
@@ -215,7 +224,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SWIFT_PACKAGE;
-				SWIFT_VERSION = 3.0;
+				SWIFT_SWIFT3_OBJC_INFERENCE = On;
+				SWIFT_VERSION = 4.0;
 				TARGET_NAME = XCLineFramework;
 			};
 			name = Debug;
@@ -228,6 +238,7 @@
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = XCLineFramework.xcodeproj/XCLineFramework_Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(TOOLCHAIN_DIR)/usr/lib/swift/macosx";
+				MACH_O_TYPE = staticlib;
 				OTHER_LDFLAGS = "$(inherited)";
 				OTHER_SWIFT_FLAGS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = XCLineFramework;
@@ -235,7 +246,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SWIFT_PACKAGE;
-				SWIFT_VERSION = 3.0;
+				SWIFT_SWIFT3_OBJC_INFERENCE = On;
+				SWIFT_VERSION = 4.0;
 				TARGET_NAME = XCLineFramework;
 			};
 			name = Release;
@@ -252,7 +264,8 @@
 				OTHER_SWIFT_FLAGS = "$(inherited)";
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SWIFT_PACKAGE;
-				SWIFT_VERSION = 3.0;
+				SWIFT_SWIFT3_OBJC_INFERENCE = On;
+				SWIFT_VERSION = 4.0;
 				TARGET_NAME = XCLineFrameworkTests;
 			};
 			name = Debug;
@@ -288,7 +301,8 @@
 				OTHER_SWIFT_FLAGS = "$(inherited)";
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SWIFT_PACKAGE;
-				SWIFT_VERSION = 3.0;
+				SWIFT_SWIFT3_OBJC_INFERENCE = On;
+				SWIFT_VERSION = 4.0;
 				TARGET_NAME = XCLineFrameworkTests;
 			};
 			name = Release;
@@ -305,7 +319,7 @@
 				OTHER_SWIFT_FLAGS = "-DXcode";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator appletvos appletvsimulator watchos watchsimulator";
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				USE_HEADERMAP = NO;
 			};
 			name = Release;

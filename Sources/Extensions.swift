@@ -1,27 +1,27 @@
 import Foundation
 
-extension String {
+extension StringProtocol where SubSequence == Substring {
     
-    func index(_ i: Int) -> Index? {
+    func index(_ i: IndexDistance) -> Index? {
         return index(startIndex, offsetBy: i, limitedBy: endIndex)
     }
     
-    func substring(to: Int) -> String {
+    func substring(to: IndexDistance) -> Substring {
         guard let end = index(to) else { return "" }
         return self[startIndex..<end]
     }
     
-    func substring(from: Int, to: Int) -> String {
+    func substring(from: IndexDistance, to: IndexDistance) -> Substring {
         guard from >= 0, from <= to, let start = index(from), let end = index(to) else { return "" }
         return self[start..<end]
     }
     
-    func substring(from: Int) -> String {
+    func substring(from: IndexDistance) -> Substring {
         guard from >= 0, let start = index(from) else { return "" }
         return self[start..<endIndex]
     }
     
-    func partition(start: Int, end: Int) -> (String, String, String) {
+    func partition(start: IndexDistance, end: IndexDistance) -> (Substring, Substring, Substring) {
         return (
             substring(to: start),
             substring(from: start, to: end),
@@ -29,15 +29,19 @@ extension String {
         )
     }
     
-    func partition(at: Int) -> (String, String) {
+    func partition(at: IndexDistance) -> (Substring, Substring) {
         return (
             substring(to: at),
             substring(from: at)
         )
     }
     
+}
+
+extension Substring {
+    
     func contains(anyOf characterSet: CharacterSet) -> Bool {
-        return unicodeScalars.contains(anyOf: characterSet)
+        return unicodeScalars.contains { characterSet.contains($0) }
     }
     
     func doesNotContain(anyOf characterSet: CharacterSet) -> Bool {
@@ -46,19 +50,20 @@ extension String {
     
 }
 
-extension String.UnicodeScalarView {
+extension CharacterSet {
     
-    func contains(anyOf characterSet: CharacterSet) -> Bool {
-        return contains { characterSet.contains($0) }
+    func contains(_ member: Character) -> Bool {
+        guard let unicodeScalar = member.unicodeScalars.first else { return false }
+        return contains(unicodeScalar)
     }
     
-    func doesNotContain(anyOf characterSet: CharacterSet) -> Bool {
-        return !contains(anyOf: characterSet)
+    func doesNotContain(_ member: Character) -> Bool {
+        return !contains(member)
     }
     
 }
 
-extension UnicodeScalar {
+extension Character {
     
     func isContained(in characterSet: CharacterSet) -> Bool {
         return characterSet.contains(self)

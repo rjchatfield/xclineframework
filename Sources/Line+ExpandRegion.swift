@@ -15,17 +15,17 @@ extension Line {
 // MARK: - Helper methods
 
 private extension Line {
-    var leftBoundary: UnicodeScalar? {
+    var leftBoundary: Character? {
         guard start > 0 else { return nil }
-        guard let index = chars.index(chars.startIndex, offsetBy: start - 1, limitedBy: chars.endIndex) else { return nil }
-        return chars[index]
+        guard let index = string.index(string.startIndex, offsetBy: start - 1, limitedBy: string.endIndex) else { return nil }
+        return string[index]
     }
-    var rightBoundary: UnicodeScalar? {
-        guard end < chars.count else { return nil }
-        guard let index = chars.index(chars.startIndex, offsetBy: end, limitedBy: chars.endIndex) else { return nil }
-        return chars[index]
+    var rightBoundary: Character? {
+        guard end < string.count else { return nil }
+        guard let index = string.index(string.startIndex, offsetBy: end, limitedBy: string.endIndex) else { return nil }
+        return string[index]
     }
-    func prevBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
+    mutating func prevBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
         let reversedStartChars = startChars.reversed()
         var boundaries = CharacterSet.leftBoundaries
         if includeQuotes { boundaries = boundaries.union(.quotes) }
@@ -36,7 +36,7 @@ private extension Line {
         }
         return 0
     }
-    func nextBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
+    mutating func nextBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
         var boundaries = CharacterSet.rightBoundaries
         if includeQuotes { boundaries = boundaries.union(.quotes) }
         if includeComma { boundaries = boundaries.union(.comma) }
@@ -56,7 +56,7 @@ private extension Line {
         }
         if let endTrim = endChars.index(where: CharacterSet.whitespacesAndNewlines.doesNotContain) {
             let dist = endChars.distance(from: endChars.startIndex, to: endTrim)
-            if dist < chars.count - end {
+            if dist < string.count - end {
                 end += dist
             }
         }
@@ -82,23 +82,27 @@ private extension Line {
         return start == end
     }
     var couldBeInAWord: Bool {
-        guard
-            selectedChars.doesNotContain(anyOf: .allBoundariesAndSpace),
-            let beforeBoundary = startChars.last,
-            let afterBoundary = endChars.first
-            else {
-                return false
+        mutating get {
+            guard
+                selectedChars.doesNotContain(anyOf: .allBoundariesAndSpace),
+                let beforeBoundary = startChars.last,
+                let afterBoundary = endChars.first
+                else {
+                    return false
+            }
+            return beforeBoundary.isNotContained(in: .allBoundariesAndSpace)
+                || afterBoundary.isNotContained(in: .allBoundariesAndSpace)
         }
-        return beforeBoundary.isNotContained(in: .allBoundariesAndSpace)
-            || afterBoundary.isNotContained(in: .allBoundariesAndSpace)
     }
     var coundBeInAParam: Bool {
-        if rightBoundary == ":" { return false }
-        if startChars.doesNotContain(anyOf: .colon) { return false }
-        if leftBoundary?.isContained(in: CharacterSet.colon.union(.comma)) == true &&
-            rightBoundary?.isContained(in: CharacterSet.rightBoundaries.union(.comma)) == true { return false }
-        if leftBoundary?.isContained(in: .leftBoundaries) == true { return false }
-        return true
+        mutating get {
+            if rightBoundary == ":" { return false }
+            if startChars.doesNotContain(anyOf: .colon) { return false }
+            if leftBoundary?.isContained(in: CharacterSet.colon.union(.comma)) == true &&
+                rightBoundary?.isContained(in: CharacterSet.rightBoundaries.union(.comma)) == true { return false }
+            if leftBoundary?.isContained(in: .leftBoundaries) == true { return false }
+            return true
+        }
     }
     var coundBeInAPair: Bool {
         if leftBoundary?.isContained(in: CharacterSet.leftBoundaries.union(.comma)) == true &&
@@ -106,9 +110,11 @@ private extension Line {
         return true
     }
     var couldBeInAString: Bool {
-        if selectedChars.contains(anyOf: .quotes) { return false }
-        if startChars.contains(anyOf: .quotes) && endChars.contains(anyOf: .quotes) { return true }
-        return false
+        mutating get {
+            if selectedChars.contains(anyOf: .quotes) { return false }
+            if startChars.contains(anyOf: .quotes) && endChars.contains(anyOf: .quotes) { return true }
+            return false
+        }
     }
     func compareBoundaries(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> ComparisonResult {
         switch (leftBoundary, rightBoundary) {
@@ -123,7 +129,7 @@ private extension Line {
             else { return .orderedAscending }
         }
     }
-    static let rules: [UnicodeScalar: String] = [
+    static let rules: [Character: String] = [
         // Left: Right
         "[": "]",
         "{": "}",
@@ -150,13 +156,13 @@ private extension Line {
         }
         return (majorBoundaries, minorBoundaries)
     }
-    func leftBoundaryScore(_ x: UnicodeScalar, includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
+    func leftBoundaryScore(_ x: Character, includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
         let (majorBoundaries, minorBoundaries) = Line.boundaries(major: .leftBoundaries, includeQuotes: includeQuotes, includeComma: includeComma, includeColon: includeColon)
         if majorBoundaries.contains(x) { return 2 }
         if minorBoundaries.contains(x) { return 1 }
         return 0
     }
-    func rightBoundaryScore(_ x: UnicodeScalar, includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
+    func rightBoundaryScore(_ x: Character, includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
         let (majorBoundaries, minorBoundaries) = Line.boundaries(major: .rightBoundaries, includeQuotes: includeQuotes, includeComma: includeComma, includeColon: includeColon)
         if majorBoundaries.contains(x) { return 2 }
         if minorBoundaries.contains(x) { return 1 }
@@ -173,20 +179,20 @@ private extension Line {
     func expandWord() -> Line {
         var result = self
         // Start
-        let startIndex = chars.index(chars.startIndex, offsetBy: start)
-        let startChars = chars[chars.startIndex..<startIndex]
+        let startIndex = string.index(string.startIndex, offsetBy: start)
+        let startChars = string[string.startIndex..<startIndex]
         if let newStart = startChars.reversed().index(where: CharacterSet.allBoundariesAndSpace.contains) {
-            result.start = chars.distance(from: chars.startIndex, to: newStart.base)
+            result.start = string.distance(from: string.startIndex, to: newStart.base)
         } else {
             result.start = 0
         }
         // End
-        let endIndex = chars.index(chars.startIndex, offsetBy: end)
-        let endScalars = chars[endIndex..<chars.endIndex]
+        let endIndex = string.index(string.startIndex, offsetBy: end)
+        let endScalars = string[endIndex...]
         if let newEnd = endScalars.index(where: CharacterSet.allBoundariesAndSpace.contains) {
-            result.end += chars.distance(from: chars.startIndex, to: newEnd)
+            result.end = string.distance(from: string.startIndex, to: newEnd)
         } else {
-            result.end = string.unicodeScalars.count
+            result.end = string.count
         }
         return result
     }
@@ -194,7 +200,7 @@ private extension Line {
         return start <= 0
     }
     var hasNoEndBoundaryToParse: Bool {
-        return end >= string.unicodeScalars.count
+        return end >= string.count
     }
     func expandedToBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> (Line, finished: Bool) {
         var line = self
@@ -205,11 +211,11 @@ private extension Line {
         switch line.compareBoundaries(includeQuotes: includeQuotes, includeComma: includeComma, includeColon: includeColon) {
         case .orderedSame: return (line, true)
         case .orderedAscending: if line.start > 0 { line.start -= 1 } else { return (line, true) }
-        case .orderedDescending: if line.end < line.chars.count { line.end += 1 } else { return (line, true) }
+        case .orderedDescending: if line.end < line.string.count { line.end += 1 } else { return (line, true) }
         }
         return (line, false)
     }
-    func _expandRegion() -> Line {
+    mutating func _expandRegion() -> Line {
         if hasNoTextSelected && couldBeInAWord {
             return expandWord()
         }
@@ -239,7 +245,7 @@ private extension Line {
     
 }
 
-private typealias Condition = (UnicodeScalar) -> Bool
+private typealias Condition = (Character) -> Bool
 private typealias IgnoringCondition = (shouldStart: Condition, shouldStop: Condition)
 
 private let ignoringConds: [IgnoringCondition] = [
@@ -253,7 +259,7 @@ private let ignoringCondsFlipped: [IgnoringCondition] = ignoringConds.map { cond
 
 // MARK: - Extensions
 
-private extension Collection where Self.Iterator.Element == UnicodeScalar {
+private extension Collection where Self.Iterator.Element == Character {
     
     func indexOf(cond: Condition, ignoringConds: [IgnoringCondition]) -> Index? {
         var ignoringCond: IgnoringCondition?
@@ -268,7 +274,6 @@ private extension Collection where Self.Iterator.Element == UnicodeScalar {
     }
     
 }
-
 private extension CharacterSet {
     
     static let swiftSyntax = CharacterSet(charactersIn: ":,.")
@@ -288,9 +293,5 @@ private extension CharacterSet {
     static let allBoundariesAndSpace = CharacterSet(charactersIn: " ")
         .union(.swiftSyntax)
         .union(.allBoundaries)
-    
-    func doesNotContain(_ member: UnicodeScalar) -> Bool {
-        return !contains(member)
-    }
-    
+        
 }
