@@ -12,7 +12,9 @@ extension Line {
     }
     
     func log(f: String = #function) {
-        print(rawDescription.replacingOccurrences(of: "\n", with: ""), "\t❣️", f)
+        #if DEBUG
+            print("❣️", rawDescription.replacingOccurrences(of: "\n", with: ""), "\t", f)
+        #endif
     }
 }
 
