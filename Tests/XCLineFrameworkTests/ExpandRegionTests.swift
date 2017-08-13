@@ -105,9 +105,10 @@ final class ExpandRegionTests: XCTestCase {
             .expands(to: "[[], |[]|]")
             .expands(to: "[|[], []|]")
         
-        _expect(thatThis: "[[[]], [[|]], [[]]]")
+        expect(thatThis: "[[[]], [[|]], [[]]]")
             .expands(to: "[[[]], [|[]|], [[]]]")
             .expands(to: "[[[]], |[[]]|, [[]]]")
+            ._expands(to: "[|[[]], [[]], [[]]|]")
             .expands(to: "|[[[]], [[]], [[]]]|")
         
         assert("[[\"hello\"], |[]|]" => "[|[\"hello\"], []|]")
@@ -118,10 +119,10 @@ final class ExpandRegionTests: XCTestCase {
         assert(" [hello|:| world] " => " [|hello: world|] ")
         assert(" [hello|: world|] " => " [|hello: world|] ")
         assert(" [hello: |world|] " => " [|hello: world|] ")
-        _expect(thatThis: "        \"|[\": \"]\",")
-            .expands(to: "        \"|[|\": \"]\",")
+        expect(thatThis: "        \"|[\": \"]\",")
+            ._expands(to: "        \"|[|\": \"]\",")
             .expands(to: "        |\"[\"|: \"]\",")
-            .expands(to: "        |\"[\": \"]\"|,")
+            ._expands(to: "        |\"[\": \"]\"|,")
             .expands(to: "        |\"[\": \"]\",|")
             .expands(to: "        |\"[\": \"]\",|")
     }
@@ -184,9 +185,9 @@ final class ExpandRegionTests: XCTestCase {
             .expands(to: "foo(|in arg1: String, at arg2: String|)")
             .expands(to: "foo|(in arg1: String, at arg2: String)|")
         
-        _expect(thatThis: "String(chars[chars.index|(after: second)|..<chars.endIndex])")
-            .expands(to: "String(chars[|chars.index(after: second)|..<chars.endIndex])")
-            .expands(to: "String(chars[|chars.index(after: second)..<chars.endIndex|])")
+        expect(thatThis: "String(chars[chars.index|(after: second)|..<chars.endIndex])")
+            ._expands(to: "String(chars[|chars.index(after: second)|..<chars.endIndex])")
+            ._expands(to: "String(chars[|chars.index(after: second)..<chars.endIndex|])")
             .expands(to: "String(chars|[chars.index(after: second)..<chars.endIndex]|)")
     }
     
@@ -247,20 +248,20 @@ final class ExpandRegionTests: XCTestCase {
     }
     
     func testAssign() {
-        _expect(thatThis: "let new.line = cu|rrentLine.expandRegion()")
+        expect(thatThis: "let new.line = cu|rrentLine.expandRegion()")
             .expands(to: "let new.line = |currentLine|.expandRegion()")
-            .expands(to: "let new.line = |currentLine.expandRegion()|")
-
-        _expect(thatThis: "let ne|w.line = currentLine.expandRegion()")
+            ._expands(to: "let new.line = |currentLine.expandRegion()|")
+        
+        expect(thatThis: "let ne|w.line = currentLine.expandRegion()")
             .expands(to: "let |new|.line = currentLine.expandRegion()")
-            .expands(to: "let |new.line| = currentLine.expandRegion()")
+            ._expands(to: "let |new.line| = currentLine.expandRegion()")
     }
     
     func testFunctionType() {
-        _expect(thatThis: "func foo(f: @escaping (H|ello) -> World) -> Boom")
+        expect(thatThis: "func foo(f: @escaping (H|ello) -> World) -> Boom")
             .expands(to: "func foo(f: @escaping (|Hello|) -> World) -> Boom")
             .expands(to: "func foo(f: @escaping |(Hello)| -> World) -> Boom")
-            .expands(to: "func foo(f: |@escaping (Hello) -> World|) -> Boom")
+            ._expands(to: "func foo(f: |@escaping (Hello) -> World|) -> Boom")
             .expands(to: "func foo(|f: @escaping (Hello) -> World|) -> Boom")
             .expands(to: "func foo|(f: @escaping (Hello) -> World)| -> Boom")
     }
@@ -270,20 +271,14 @@ final class ExpandRegionTests: XCTestCase {
 extension ExpandRegionTests {
     
     @discardableResult
-    func assert(_ touple: (initialString: String, expectedString: String), file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
-        let initial = makeRaw(touple.initialString)!
-        let expected = makeRaw(touple.expectedString)!
-        let result = Line(raw: initial).expandRegion().raw
-        let emoji = result == expected ? " 😃" : " 👿"
-        let message = "\(initial.before)|\(initial.selected)|\(initial.after)" +
-            " -> " +
-            "\(expected.before)|\(expected.selected)|\(expected.after)" +
-            emoji +
-        "\(result.before)|\(result.selected)|\(result.after)"
+    func assert(_ touple: (initialString: String, expectedString: String), ignored: Bool = false, file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
+        let initial = Line(testString: touple.initialString)
+        let expected = Line(testString: touple.expectedString)
+        let result = initial.expandedRegion()
+        let emoji = ignored ? "🐛" : result == expected ? " 😃" : " 👿"
+        let message = "\(initial.rawDescription) -> \(expected.rawDescription) \(emoji) \(result.rawDescription)"
         print(message)
-        if result != expected {
-            XCTFail(message, file: file, line: line)
-        }
+        XCTAssert(ignored || result == expected, message, file: file, line: line)
         return LineTestBuilder(string: touple.expectedString, testCase: self)
     }
     
@@ -305,12 +300,17 @@ struct LineTestBuilder {
     let string: String?
     let testCase: ExpandRegionTests
     @discardableResult
-    func expands(to other: String, file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
+    func expands(to other: String, ignored: Bool = false, file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
         if let string = string {
-            return testCase.assert(string => other, file: file, line: line)
+            return testCase.assert(string => other, ignored: ignored, file: file, line: line)
         } else {
             return LineTestBuilder(string: nil, testCase: testCase)
         }
+    }
+    
+    @discardableResult
+    func _expands(to other: String, file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
+        return expands(to: other, ignored: true, file: file, line: line)
     }
 }
 

@@ -17,10 +17,10 @@ public struct Line {
         }
     }
     
-    public init(string: String, start: Int, end: Int) {
+    public init(string: String, startColumn: Int, endColumn: Int) {
         self.string = string
-        self.start = start
-        self.end = end
+        self.start = startColumn
+        self.end = endColumn
     }
     
     // CACHED VALUES
@@ -72,24 +72,37 @@ public struct Line {
     }
 }
 
+// MARK: - RAW Representation
+
 extension Line {
-    public typealias Raw = (before: Substring, selected: Substring, after: Substring)
-    public init(raw: Raw) {
-        self.init(
-            string: String(raw.before + raw.selected + raw.after),
-            start: raw.before.count,
-            end: raw.before.count + raw.selected.count)
+    
+    fileprivate typealias Raw = (before: Substring, selected: Substring, after: Substring)
+    
+    init(testString: String) {
+        let raw = makeRaw(testString)!
+        string = String(raw.before + raw.selected + raw.after)
+        start = raw.before.count
+        end = raw.before.count + raw.selected.count
     }
-    public init?(string: String) {
-        guard let raw = makeRaw(string) else { return nil }
-        self.init(raw: raw)
+    
+    var rawDescription: String {
+        let raw: Raw = string.partition(start: start, end: end)
+        return "\(raw.before)|\(raw.selected)|\(raw.after)"
     }
-    public var raw: Raw {
-        return string.partition(start: start, end: end)
+    
+}
+
+// MARK: - Equatable
+
+extension Line: Equatable {
+    public static func == (lhs: Line, rhs: Line) -> Bool {
+        return lhs.start == rhs.start
+            && lhs.end == rhs.end
+            && lhs.string == rhs.string
     }
 }
 
-func makeRaw(_ string: String) -> Line.Raw? {
+private func makeRaw(_ string: String) -> Line.Raw? {
     guard let firstDividerIndex = string.index(of: "|") else { return nil }
     let beforeFirstDivider = string.prefix(upTo: firstDividerIndex)
     let afterFirstDivider = string[string.index(after: firstDividerIndex)...]
