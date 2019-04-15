@@ -153,7 +153,7 @@
 				LastUpgradeCheck = 9999;
 				TargetAttributes = {
 					OBJ_18 = {
-						LastSwiftMigration = 0900;
+						LastSwiftMigration = 1010;
 					};
 					OBJ_27 = {
 						LastSwiftMigration = 0900;
@@ -223,8 +223,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SWIFT_PACKAGE;
-				SWIFT_SWIFT3_OBJC_INFERENCE = On;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 				TARGET_NAME = XCLineFramework;
 			};
 			name = Debug;
@@ -244,8 +243,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SWIFT_PACKAGE;
-				SWIFT_SWIFT3_OBJC_INFERENCE = On;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 				TARGET_NAME = XCLineFramework;
 			};
 			name = Release;

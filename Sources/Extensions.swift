@@ -2,26 +2,26 @@ import Foundation
 
 extension StringProtocol where SubSequence == Substring {
     
-    func index(_ i: IndexDistance) -> Index? {
+    func index(_ i: Int) -> Index? {
         return index(startIndex, offsetBy: i, limitedBy: endIndex)
     }
     
-    func substring(to: IndexDistance) -> Substring {
+    func substring(to: Int) -> Substring {
         guard let end = index(to) else { return "" }
         return self[startIndex..<end]
     }
     
-    func substring(from: IndexDistance, to: IndexDistance) -> Substring {
+    func substring(from: Int, to: Int) -> Substring {
         guard from >= 0, from <= to, let start = index(from), let end = index(to) else { return "" }
         return self[start..<end]
     }
     
-    func substring(from: IndexDistance) -> Substring {
+    func substring(from: Int) -> Substring {
         guard from >= 0, let start = index(from) else { return "" }
         return self[start..<endIndex]
     }
     
-    func partition(start: IndexDistance, end: IndexDistance) -> (Substring, Substring, Substring) {
+    func partition(start: Int, end: Int) -> (Substring, Substring, Substring) {
         return (
             substring(to: start),
             substring(from: start, to: end),
@@ -29,7 +29,7 @@ extension StringProtocol where SubSequence == Substring {
         )
     }
     
-    func partition(at: IndexDistance) -> (Substring, Substring) {
+    func partition(at: Int) -> (Substring, Substring) {
         return (
             substring(to: at),
             substring(from: at)
