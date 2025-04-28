@@ -1,24 +1,9 @@
-import XCTest
+import Testing
 @testable import XCLineFramework
 
-final class ExpandRegionTests: XCTestCase {
-    
-    /// For Linux tests
-    static var allTests : [(String, (ExpandRegionTests) -> () throws -> Void)] {
-        return [
-            ("testWordInHello", testWordInHello),
-            ("testWordInQuotes", testWordInQuotes),
-            ("testWordInArray", testWordInArray),
-            ("testDictionary", testDictionary),
-            ("testFunc", testFunc),
-            ("testPairs_params", testPairs_params),
-            ("testPairs_dict", testPairs_dict),
-            ("testPairs_generics", testPairs_generics),
-            ("testCase", testCase),
-            ("testAssign", testAssign),
-        ]
-    }
-    
+@Suite
+struct ExpandRegionTests {
+    @Test
     func testWordInHello() {
         // With space
         assert(" |hello "  => " |hello| ")
@@ -37,6 +22,7 @@ final class ExpandRegionTests: XCTestCase {
         assert("hello|"  => "|hello|")
     }
     
+    @Test
     func testWordInQuotes() {
         // Leading \"
         assert(" \"|hello "  => " \"|hello| ")
@@ -61,6 +47,7 @@ final class ExpandRegionTests: XCTestCase {
         assert(" \"hello|\" "   => " \"|hello|\" ")
     }
     
+    @Test
     func testWordInArray() {
         // []
         assert(" [|hello] "  => " [|hello|] ")
@@ -78,6 +65,7 @@ final class ExpandRegionTests: XCTestCase {
         assert(" [hello|, world] "  => " [|hello|, world] ")
     }
     
+    @Test
     func testArray() {
         assert(" [hello|,| world] " => " [|hello, world|] ")
         assert(" [hello|, world|] " => " [|hello, world|] ")
@@ -114,6 +102,7 @@ final class ExpandRegionTests: XCTestCase {
         assert("[[\"hello\"], |[]|]" => "[|[\"hello\"], []|]")
     }
     
+    @Test
     func testDictionary() {
         assert(" [|hello:| world] " => " [|hello: world|] ")
         assert(" [hello|:| world] " => " [|hello: world|] ")
@@ -127,6 +116,7 @@ final class ExpandRegionTests: XCTestCase {
             .expands(to: "        |\"[\": \"]\",|")
     }
     
+    @Test
     func testFunc() {
         expect(thatThis: "(foo: hell|o.world)")
             .expands(to: "(foo: |hello|.world)")
@@ -191,6 +181,7 @@ final class ExpandRegionTests: XCTestCase {
             .expands(to: "String(chars|[chars.index(after: second)..<chars.endIndex]|)")
     }
     
+    @Test
     func testPairs_params() {
         assert("(|a|:b,c:d,e:f)" => "(|a:b|,c:d,e:f)")
         assert("(a:|b|,c:d,e:f)" => "(|a:b|,c:d,e:f)")
@@ -207,6 +198,7 @@ final class ExpandRegionTests: XCTestCase {
         assert("(a: b, c: d, e: |f|)" => "(a: b, c: d, |e: f|)")
     }
     
+    @Test
     func testPairs_dict() {
         assert("[|a|:b,c:d,e:f]" => "[|a:b|,c:d,e:f]")
         assert("[a:|b|,c:d,e:f]" => "[|a:b|,c:d,e:f]")
@@ -223,6 +215,7 @@ final class ExpandRegionTests: XCTestCase {
         assert("[a: b, c: d, e: |f|]" => "[a: b, c: d, |e: f|]")
     }
     
+    @Test
     func testPairs_generics() {
         assert("<|a|:b,c:d,e:f>" => "<|a:b|,c:d,e:f>")
         assert("<a:|b|,c:d,e:f>" => "<|a:b|,c:d,e:f>")
@@ -239,6 +232,7 @@ final class ExpandRegionTests: XCTestCase {
         assert("<a: b, c: d, e: |f|>" => "<a: b, c: d, |e: f|>")
     }
     
+    @Test
     func testCase() {
         expect(thatThis: "case (_?, nil|): return .orderedAscending")
             .expands(to: "case (_?, |nil|): return .orderedAscending")
@@ -247,6 +241,7 @@ final class ExpandRegionTests: XCTestCase {
             .expands(to: "|case (_?, nil): return .orderedAscending|")
     }
     
+    @Test
     func testAssign() {
         expect(thatThis: "let new.line = cu|rrentLine.expandRegion()")
             .expands(to: "let new.line = |currentLine|.expandRegion()")
@@ -257,6 +252,7 @@ final class ExpandRegionTests: XCTestCase {
             ._expands(to: "let |new.line| = currentLine.expandRegion()")
     }
     
+    @Test
     func testFunctionType() {
         expect(thatThis: "func foo(f: @escaping (H|ello) -> World) -> Boom")
             .expands(to: "func foo(f: @escaping (|Hello|) -> World) -> Boom")
@@ -270,14 +266,20 @@ final class ExpandRegionTests: XCTestCase {
 
 extension ExpandRegionTests {
     @discardableResult
-    func assert(_ tuple: (initialString: String, expectedString: String), ignored: Bool = false, file: StaticString = #filePath, line: UInt = #line) -> LineTestBuilder {
+    func assert(
+        _ tuple: (initialString: String, expectedString: String),
+        ignored: Bool = false,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) -> LineTestBuilder {
         let initial = Line(testString: tuple.initialString)
         let expected = Line(testString: tuple.expectedString)
         let result = initial.expandedRegion()
         let emoji = ignored ? "🐛" : result == expected ? " 😃" : " 👿"
-        let message = "\(initial.rawDescription) -> \(expected.rawDescription) \(emoji) \(result.rawDescription)"
-        print(message)
-        XCTAssert(ignored || result == expected, message, file: file, line: line)
+        let comment: Comment = "\(initial.rawDescription) -> \(expected.rawDescription) \(emoji) \(result.rawDescription)"
+        print(comment)
+        if !ignored, result != expected {
+            Issue.record(comment, sourceLocation: sourceLocation)
+        }
         return LineTestBuilder(string: tuple.expectedString, testCase: self)
     }
 
@@ -298,18 +300,23 @@ extension ExpandRegionTests {
 struct LineTestBuilder {
     let string: String?
     let testCase: ExpandRegionTests
+
     @discardableResult
-    func expands(to other: String, ignored: Bool = false, file: StaticString = #filePath, line: UInt = #line) -> LineTestBuilder {
+    func expands(
+        to other: String,
+        ignored: Bool = false,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) -> LineTestBuilder {
         if let string {
-            return testCase.assert(string => other, ignored: ignored, file: file, line: line)
+            return testCase.assert(string => other, ignored: ignored, sourceLocation: sourceLocation)
         } else {
             return LineTestBuilder(string: nil, testCase: testCase)
         }
     }
-    
+
     @discardableResult
-    func _expands(to other: String, file: StaticString = #filePath, line: UInt = #line) -> LineTestBuilder {
-        return expands(to: other, ignored: true, file: file, line: line)
+    func _expands(to other: String) -> LineTestBuilder {
+        return expands(to: other, ignored: true)
     }
 }
 
