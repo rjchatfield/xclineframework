@@ -77,15 +77,17 @@ public struct Line {
 extension Line {
     
     fileprivate typealias Raw = (before: Substring, selected: Substring, after: Substring)
-    
-    init(testString: String) {
+
+    @_spi(Testing)
+    public init(testString: String) {
         let raw = makeRaw(testString)!
         string = String(raw.before + raw.selected + raw.after)
         start = raw.before.count
         end = raw.before.count + raw.selected.count
     }
     
-    var rawDescription: String {
+    @_spi(Testing)
+    public var rawDescription: String {
         let raw: Raw = string.partition(start: start, end: end)
         return "\(raw.before)|\(raw.selected)|\(raw.after)"
     }

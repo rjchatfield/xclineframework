@@ -1,5 +1,5 @@
 import Testing
-@testable import XCLineFramework
+@_spi(Testing) import XCLineFramework
 
 @Suite
 struct ExpandRegionTests {
