@@ -269,19 +269,18 @@ final class ExpandRegionTests: XCTestCase {
 }
 
 extension ExpandRegionTests {
-    
     @discardableResult
-    func assert(_ touple: (initialString: String, expectedString: String), ignored: Bool = false, file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
-        let initial = Line(testString: touple.initialString)
-        let expected = Line(testString: touple.expectedString)
+    func assert(_ tuple: (initialString: String, expectedString: String), ignored: Bool = false, file: StaticString = #filePath, line: UInt = #line) -> LineTestBuilder {
+        let initial = Line(testString: tuple.initialString)
+        let expected = Line(testString: tuple.expectedString)
         let result = initial.expandedRegion()
         let emoji = ignored ? "🐛" : result == expected ? " 😃" : " 👿"
         let message = "\(initial.rawDescription) -> \(expected.rawDescription) \(emoji) \(result.rawDescription)"
         print(message)
         XCTAssert(ignored || result == expected, message, file: file, line: line)
-        return LineTestBuilder(string: touple.expectedString, testCase: self)
+        return LineTestBuilder(string: tuple.expectedString, testCase: self)
     }
-    
+
     @discardableResult
     func expect(thatThis initial: String) -> LineTestBuilder {
         return LineTestBuilder(string: initial, testCase: self)
@@ -300,8 +299,8 @@ struct LineTestBuilder {
     let string: String?
     let testCase: ExpandRegionTests
     @discardableResult
-    func expands(to other: String, ignored: Bool = false, file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
-        if let string = string {
+    func expands(to other: String, ignored: Bool = false, file: StaticString = #filePath, line: UInt = #line) -> LineTestBuilder {
+        if let string {
             return testCase.assert(string => other, ignored: ignored, file: file, line: line)
         } else {
             return LineTestBuilder(string: nil, testCase: testCase)
@@ -309,7 +308,7 @@ struct LineTestBuilder {
     }
     
     @discardableResult
-    func _expands(to other: String, file: StaticString = #file, line: UInt = #line) -> LineTestBuilder {
+    func _expands(to other: String, file: StaticString = #filePath, line: UInt = #line) -> LineTestBuilder {
         return expands(to: other, ignored: true, file: file, line: line)
     }
 }

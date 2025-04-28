@@ -1,7 +1,6 @@
 import Foundation
 
 extension StringProtocol where SubSequence == Substring {
-    
     func index(_ i: Int) -> Index? {
         return index(startIndex, offsetBy: i, limitedBy: endIndex)
     }
@@ -35,11 +34,9 @@ extension StringProtocol where SubSequence == Substring {
             substring(from: at)
         )
     }
-    
 }
 
 extension Substring {
-    
     func contains(anyOf characterSet: CharacterSet) -> Bool {
         return unicodeScalars.contains { characterSet.contains($0) }
     }
@@ -47,11 +44,9 @@ extension Substring {
     func doesNotContain(anyOf characterSet: CharacterSet) -> Bool {
         return !contains(anyOf: characterSet)
     }
-    
 }
 
 extension CharacterSet {
-    
     func contains(_ member: Character) -> Bool {
         guard let unicodeScalar = member.unicodeScalars.first else { return false }
         return contains(unicodeScalar)
@@ -60,11 +55,9 @@ extension CharacterSet {
     func doesNotContain(_ member: Character) -> Bool {
         return !contains(member)
     }
-    
 }
 
 extension Character {
-    
     func isContained(in characterSet: CharacterSet) -> Bool {
         return characterSet.contains(self)
     }
@@ -72,5 +65,4 @@ extension Character {
     func isNotContained(in characterSet: CharacterSet) -> Bool {
         return !isContained(in: characterSet)
     }
-    
 }

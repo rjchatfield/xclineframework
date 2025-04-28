@@ -103,10 +103,10 @@ extension Line: Equatable {
 }
 
 private func makeRaw(_ string: String) -> Line.Raw? {
-    guard let firstDividerIndex = string.index(of: "|") else { return nil }
+    guard let firstDividerIndex = string.firstIndex(of: "|") else { return nil }
     let beforeFirstDivider = string.prefix(upTo: firstDividerIndex)
     let afterFirstDivider = string[string.index(after: firstDividerIndex)...]
-    if let secondDivider = afterFirstDivider.index(of: "|") {
+    if let secondDivider = afterFirstDivider.firstIndex(of: "|") {
         return (
             beforeFirstDivider,
             afterFirstDivider[..<secondDivider],
