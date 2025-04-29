@@ -1,37 +1,46 @@
 import Foundation
 
-extension StringProtocol where SubSequence == Substring {
-    func index(_ i: Int) -> Index? {
-        return index(startIndex, offsetBy: i, limitedBy: endIndex)
+extension Collection where Element == Character {
+    func safeIndex(offset: Int) -> Index? {
+        return index(startIndex, offsetBy: offset, limitedBy: endIndex)
     }
-    
-    func substring(to: Int) -> Substring {
-        guard let end = index(to) else { return "" }
+
+    func firstIndex(in set: CharacterSet) -> Index? {
+        firstIndex(where: set.contains)
+    }
+}
+
+extension StringProtocol where SubSequence == Substring {
+    func safeSubstring(to: Int) -> Substring {
+        guard let end = safeIndex(offset: to) else { return "" }
         return self[startIndex..<end]
     }
     
-    func substring(from: Int, to: Int) -> Substring {
-        guard from >= 0, from <= to, let start = index(from), let end = index(to) else { return "" }
+    func safeSubstring(from: Int, to: Int) -> Substring {
+        guard from >= 0, from <= to,
+              let start = safeIndex(offset: from),
+              let end = safeIndex(offset: to)
+        else { return "" }
         return self[start..<end]
     }
     
-    func substring(from: Int) -> Substring {
-        guard from >= 0, let start = index(from) else { return "" }
+    func safeSubstring(from: Int) -> Substring {
+        guard from >= 0, let start = safeIndex(offset: from) else { return "" }
         return self[start..<endIndex]
     }
-    
+
     func partition(start: Int, end: Int) -> (Substring, Substring, Substring) {
         return (
-            substring(to: start),
-            substring(from: start, to: end),
-            substring(from: end)
+            safeSubstring(to: start),
+            safeSubstring(from: start, to: end),
+            safeSubstring(from: end)
         )
     }
     
     func partition(at: Int) -> (Substring, Substring) {
         return (
-            substring(to: at),
-            substring(from: at)
+            safeSubstring(to: at),
+            safeSubstring(from: at)
         )
     }
 }

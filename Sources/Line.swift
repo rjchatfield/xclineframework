@@ -2,80 +2,29 @@ import Foundation
 
 public struct Line {
     let string: String
-    public internal(set) var start: Int {
-        didSet {
-            _startIndex = nil
-            _selectedChars = nil
-            _startChars = nil
-        }
+    public internal(set) var start: Int
+    public internal(set) var end: Int
+
+    var startIndex: String.Index {
+        get { string.safeIndex(offset: start)! }
+        set { start = string.distance(from: string.startIndex, to: newValue) }
     }
-    public internal(set) var end: Int {
-        didSet {
-            _endIndex = nil
-            _selectedChars = nil
-            _endChars = nil
-        }
+
+    var endIndex: String.Index {
+        get { string.safeIndex(offset: end)! }
+        set { end = string.distance(from: string.startIndex, to: newValue) }
     }
-    
+
     public init(string: String, startColumn: Int, endColumn: Int) {
         self.string = string
         self.start = startColumn
         self.end = endColumn
-    }
-    
-    // CACHED VALUES
-    private var _startIndex: String.Index?
-    private var startIndex: String.Index {
-        mutating get {
-            if _startIndex == nil {
-                _startIndex = string.index(start) ?? string.endIndex
-            }
-            return _startIndex!
-        }
-    }
-    private var _endIndex: String.Index?
-    private var endIndex: String.Index {
-        mutating get {
-            if _endIndex == nil {
-                _endIndex = string.index(end) ?? string.endIndex
-            }
-            return _endIndex!
-        }
-    }
-    
-    private var _selectedChars: Substring?
-    var selectedChars: Substring {
-        mutating get {
-            if _selectedChars == nil {
-                _selectedChars = string[startIndex..<endIndex]
-            }
-            return _selectedChars!
-        }
-    }
-    private var _startChars: Substring?
-    var startChars: Substring {
-        mutating get {
-            if _startChars == nil {
-                _startChars = string[..<startIndex]
-            }
-            return _startChars!
-        }
-    }
-    private var _endChars: Substring?
-    var endChars: Substring {
-        mutating get {
-            if _endChars == nil {
-                _endChars = string[endIndex...]
-            }
-            return _endChars!
-        }
     }
 }
 
 // MARK: - RAW Representation
 
 extension Line {
-    
     fileprivate typealias Raw = (before: Substring, selected: Substring, after: Substring)
 
     @_spi(Testing)

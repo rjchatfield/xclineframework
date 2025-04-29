@@ -3,7 +3,6 @@ import Foundation
 extension Line {
     public func expandedRegion() -> Line {
         var result = self
-        log()
         result.untrimSelection()
         result.expand()
         result.trimSelection()
@@ -18,65 +17,10 @@ extension Line {
 }
 
 private extension Line {
-    // MARK: - Status properties
-    
-    private var hasNoTextSelected: Bool {
-        return start == end
-    }
+    // MARK: -  Methods
 
-    private var couldBeInAWord: Bool {
-        mutating get {
-            guard selectedChars.doesNotContain(anyOf: .allBoundariesAndSpace),
-                  let beforeBoundary = startChars.last,
-                  let afterBoundary = endChars.first
-            else {
-                return false
-            }
-            return beforeBoundary.isNotContained(in: .allBoundariesAndSpace)
-                || afterBoundary.isNotContained(in: .allBoundariesAndSpace)
-        }
-    }
-
-    private var couldBeInAParam: Bool {
-        mutating get {
-            if rightBoundary == ":" { return false }
-            if startChars.doesNotContain(anyOf: .colon) { return false }
-            if leftBoundary?.isContained(in: CharacterSet.colon.union(.comma)) == true,
-                rightBoundary?.isContained(in: CharacterSet.rightBoundaries.union(.comma)) == true { return false }
-            if leftBoundary?.isContained(in: .leftBoundaries) == true { return false }
-            return true
-        }
-    }
-
-    private var couldBeInAPair: Bool {
-        if let leftBoundary,
-           let rightBoundary,
-           leftBoundary.isContained(in: CharacterSet.leftBoundaries.union(.comma)),
-           rightBoundary.isContained(in: CharacterSet.rightBoundaries.union(.comma)) {
-            return false
-        }
-        return true
-    }
-
-    private var couldBeInAString: Bool {
-        mutating get {
-            if selectedChars.contains(anyOf: .quotes) { return false }
-            if startChars.contains(anyOf: .quotes) && endChars.contains(anyOf: .quotes) { return true }
-            return false
-        }
-    }
-
-    private var hasNoStartBoundaryToParse: Bool {
-        return start <= 0
-    }
-
-    private var hasNoEndBoundaryToParse: Bool {
-        return end >= string.count
-    }
-    
-    // MARK: - Mutations
-    
     mutating func untrimSelection() {
+        defer { log() }
         let reversedStartChars = startChars.reversed()
         if let startTrim = reversedStartChars.firstIndex(where: CharacterSet.whitespacesAndNewlines.doesNotContain) {
             let dist = reversedStartChars.distance(from: reversedStartChars.startIndex, to: startTrim)
@@ -90,10 +34,20 @@ private extension Line {
                 end += dist
             }
         }
-        log()
+    }
+
+    mutating func expand() {
+        if couldBeInAWord {
+            self = expandedToWord()
+        } else if boundariesMatch {
+            self = expandedToIncludeBoundaries()
+        } else {
+            self = expandedBeyondBoundaries()
+        }
     }
 
     mutating func trimSelection() {
+        defer { log() }
         if let startTrim = selectedChars.firstIndex(where: CharacterSet.whitespacesAndNewlines.doesNotContain) {
             let dist = selectedChars.distance(from: selectedChars.startIndex, to: startTrim)
             let newStart = start + dist
@@ -109,52 +63,76 @@ private extension Line {
                 end = newEnd
             }
         }
-        log()
     }
 
-    mutating func expand() {
-        if couldBeInAWord {
-            self = expandedToWord()
-        } else if boundariesExactlyMatch {
-            self = expandedToIncludeBoundaries()
-        } else {
-            self = expandedBeyondBoundaries()
+    // MARK: - Status properties
+
+    private var selectedChars: Substring { string[startIndex..<endIndex] }
+    private var startChars: Substring { string[..<startIndex] }
+    private var endChars: Substring { string[endIndex...] }
+
+    /// Check that both next and previous are not boundaries yet
+    private var couldBeInAWord: Bool {
+        guard selectedChars.doesNotContain(anyOf: .allBoundariesAndSpace),
+              let beforeBoundary = startChars.last,
+              let afterBoundary = endChars.first
+        else {
+            return false
         }
-        log()
+        return beforeBoundary.isNotContained(in: .allBoundariesAndSpace)
+            || afterBoundary.isNotContained(in: .allBoundariesAndSpace)
     }
+
+    private var couldBeInAParam: Bool {
+        if trailingBoundary == ":" { return false }
+        if startChars.doesNotContain(anyOf: .colon) { return false }
+        if leadingBoundary?.isContained(in: CharacterSet.colon.union(.comma)) == true,
+            trailingBoundary?.isContained(in: CharacterSet.rightBoundaries.union(.comma)) == true { return false }
+        if leadingBoundary?.isContained(in: .leftBoundaries) == true { return false }
+        return true
+    }
+
+    private var couldBeInAPair: Bool {
+        if let leadingBoundary,
+           let trailingBoundary,
+           leadingBoundary.isContained(in: CharacterSet.leftBoundaries.union(.comma)),
+           trailingBoundary.isContained(in: CharacterSet.rightBoundaries.union(.comma)) {
+            return false
+        }
+        return true
+    }
+
+    private var couldBeInAString: Bool {
+        if selectedChars.contains(anyOf: .quotes) { return false }
+        if startChars.contains(anyOf: .quotes) && endChars.contains(anyOf: .quotes) { return true }
+        return false
+    }
+
+    private var hasNoStartBoundaryToParse: Bool { start <= 0 }
+
+    private var hasNoEndBoundaryToParse: Bool { end >= string.count }
+    
+    // MARK: - Mutations
 
     private func expandedToWord() -> Line {
-        var result = self
-        // Start
-        let startIndex = string.index(string.startIndex, offsetBy: start)
-        let startChars = string[string.startIndex..<startIndex]
-        if let newStart = startChars.reversed().firstIndex(where: CharacterSet.allBoundariesAndSpace.contains) {
-            result.start = string.distance(from: string.startIndex, to: newStart.base)
-        } else {
-            result.start = 0
-        }
-        // End
-        let endIndex = string.index(string.startIndex, offsetBy: end)
-        let endScalars = string[endIndex...]
-        if let newEnd = endScalars.firstIndex(where: CharacterSet.allBoundariesAndSpace.contains) {
-            result.end = string.distance(from: string.startIndex, to: newEnd)
-        } else {
-            result.end = string.count
-        }
-        result.log()
-        return result
+        var line = self
+        defer { line.log() }
+        line.startIndex = startChars.reversed().firstIndex(in: .allBoundariesAndSpace)?.base ?? string.startIndex
+        line.endIndex = endChars.firstIndex(in: .allBoundariesAndSpace) ?? string.endIndex
+        return line
     }
 
     private func expandedToIncludeBoundaries() -> Line {
-        var result = self
-        result.start -= 1
-        result.end += 1
-        result.log()
-        return result
+        var line = self
+        defer { line.log() }
+        line.start -= 1
+        line.end += 1
+        return line
     }
 
-    private mutating func expandedBeyondBoundaries() -> Line {
+    private func expandedBeyondBoundaries() -> Line {
         var remaining = self
+        defer { remaining.log() }
         var willExpandToQuotes = true
         var willExpandToComma = true
         var willExpandToColon = true
@@ -172,10 +150,11 @@ private extension Line {
 
     private func expandedToBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> (Line, finished: Bool) {
         var line = self
-        line.end = line.nextBoundary(includeQuotes: includeQuotes, includeComma: includeComma, includeColon: includeColon)
-        line.start = line.prevBoundary(includeQuotes: includeQuotes, includeComma: includeComma, includeColon: includeColon)
+        defer { line.log() }
+        line.end = line.findNextTrailingBoundary(includeQuotes: includeQuotes, includeComma: includeComma, includeColon: includeColon)
+        line.start = line.findPreviousLeadingBoundary(includeQuotes: includeQuotes, includeComma: includeComma, includeColon: includeColon)
         if line.hasNoStartBoundaryToParse && line.hasNoEndBoundaryToParse { return (line, true) }
-        if line.boundariesExactlyMatch { return (line, true) }
+        if line.boundariesMatch { return (line, true) }
         switch line.compareBoundaries(includeQuotes: includeQuotes, includeComma: includeComma, includeColon: includeColon) {
         case .orderedSame: return (line, true)
         case .orderedAscending: if line.start > 0 { line.start -= 1 } else { return (line, true) }
@@ -186,19 +165,27 @@ private extension Line {
     
     // MARK: - Boundaries
     
-    private var leftBoundary: Character? {
+    private var leadingBoundary: Character? {
         guard start > 0 else { return nil }
         guard let index = string.index(string.startIndex, offsetBy: start - 1, limitedBy: string.endIndex) else { return nil }
         return string[index]
     }
 
-    private var rightBoundary: Character? {
+    private var trailingBoundary: Character? {
         guard end < string.count else { return nil }
         guard let index = string.index(string.startIndex, offsetBy: end, limitedBy: string.endIndex) else { return nil }
         return string[index]
     }
 
-    private mutating func prevBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
+    private var boundariesMatch: Bool {
+        guard let leadingBoundary,
+              let trailingBoundary,
+              let matches = rules[leadingBoundary]
+        else { return false }
+        return CharacterSet(charactersIn: matches).contains(trailingBoundary)
+    }
+
+    private func findPreviousLeadingBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
         let reversedStartChars = startChars.reversed()
         var boundaries = CharacterSet.leftBoundaries
         if includeQuotes { boundaries = boundaries.union(.quotes) }
@@ -210,7 +197,7 @@ private extension Line {
         return 0
     }
 
-    private mutating func nextBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
+    private func findNextTrailingBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> Int {
         var boundaries = CharacterSet.rightBoundaries
         if includeQuotes { boundaries = boundaries.union(.quotes) }
         if includeComma { boundaries = boundaries.union(.comma) }
@@ -222,7 +209,7 @@ private extension Line {
     }
 
     private func compareBoundaries(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> ComparisonResult {
-        switch (leftBoundary, rightBoundary) {
+        switch (leadingBoundary, trailingBoundary) {
         case (nil, nil): return .orderedSame
         case (_?, nil): return .orderedAscending
         case (nil, _?): return .orderedDescending
@@ -261,14 +248,6 @@ private extension Line {
         if majorBoundaries.contains(x) { return 2 }
         if minorBoundaries.contains(x) { return 1 }
         return 0
-    }
-
-    private var boundariesExactlyMatch: Bool {
-        guard let leftBoundary,
-              let rightBoundary,
-              let matches = rules[leftBoundary]
-        else { return false }
-        return CharacterSet(charactersIn: matches).contains(rightBoundary)
     }
 }
 
