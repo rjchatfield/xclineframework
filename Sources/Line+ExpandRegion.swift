@@ -22,13 +22,13 @@ private extension Line {
     mutating func untrimSelection() {
         defer { log() }
         let reversedStartChars = startChars.reversed()
-        if let startTrim = reversedStartChars.firstIndex(where: CharacterSet.whitespacesAndNewlines.doesNotContain) {
+        if let startTrim = reversedStartChars.firstIndex(notIn: .whitespacesAndNewlines) {
             let dist = reversedStartChars.distance(from: reversedStartChars.startIndex, to: startTrim)
             if dist <= start {
                 start -= dist
             }
         }
-        if let endTrim = endChars.firstIndex(where: CharacterSet.whitespacesAndNewlines.doesNotContain) {
+        if let endTrim = endChars.firstIndex(notIn: .whitespacesAndNewlines) {
             let dist = endChars.distance(from: endChars.startIndex, to: endTrim)
             if dist < string.count - end {
                 end += dist
@@ -48,7 +48,7 @@ private extension Line {
 
     mutating func trimSelection() {
         defer { log() }
-        if let startTrim = selectedChars.firstIndex(where: CharacterSet.whitespacesAndNewlines.doesNotContain) {
+        if let startTrim = selectedChars.firstIndex(notIn: .whitespacesAndNewlines) {
             let dist = selectedChars.distance(from: selectedChars.startIndex, to: startTrim)
             let newStart = start + dist
             if newStart <= end {
@@ -56,7 +56,7 @@ private extension Line {
             }
         }
         let reversedSelectedChars = selectedChars.reversed()
-        if let endTrim = reversedSelectedChars.firstIndex(where: CharacterSet.whitespacesAndNewlines.doesNotContain) {
+        if let endTrim = reversedSelectedChars.firstIndex(notIn: .whitespacesAndNewlines) {
             let dist = reversedSelectedChars.distance(from: reversedSelectedChars.startIndex, to: endTrim)
             let newEnd = end - dist
             if newEnd >= start {
@@ -108,10 +108,12 @@ private extension Line {
         return false
     }
 
-    private var hasNoStartBoundaryToParse: Bool { start <= 0 }
+    private var hasStartBoundaryToParse: Bool { start > 0 }
+    private var hasNoStartBoundaryToParse: Bool { !hasStartBoundaryToParse }
 
-    private var hasNoEndBoundaryToParse: Bool { end >= string.count }
-    
+    private var hasEndBoundaryToParse: Bool { end < string.count }
+    private var hasNoEndBoundaryToParse: Bool { !hasEndBoundaryToParse }
+
     // MARK: - Mutations
 
     private func expandedToWord() -> Line {
@@ -131,8 +133,8 @@ private extension Line {
     }
 
     private func expandedBeyondBoundaries() -> Line {
-        var remaining = self
-        defer { remaining.log() }
+        var line = self
+        defer { line.log() }
         var willExpandToQuotes = true
         var willExpandToComma = true
         var willExpandToColon = true
@@ -140,12 +142,12 @@ private extension Line {
             if willExpandToQuotes && !couldBeInAString { willExpandToQuotes = false }
             if willExpandToComma && !couldBeInAPair { willExpandToComma = false }
             if willExpandToColon && !couldBeInAParam { willExpandToColon = false }
-            let (expandedLine, finished) = remaining.expandedToBoundary(includeQuotes: willExpandToQuotes, includeComma: willExpandToComma, includeColon: willExpandToColon)
+            let (expandedLine, finished) = line.expandedToBoundary(includeQuotes: willExpandToQuotes, includeComma: willExpandToComma, includeColon: willExpandToColon)
             if finished { return expandedLine }
-            remaining = expandedLine
-            remaining.log()
-        } while !remaining.hasNoStartBoundaryToParse || !remaining.hasNoEndBoundaryToParse
-        return remaining
+            line = expandedLine
+            line.log()
+        } while !line.hasNoStartBoundaryToParse || !line.hasNoEndBoundaryToParse
+        return line
     }
 
     private func expandedToBoundary(includeQuotes: Bool, includeComma: Bool, includeColon: Bool) -> (Line, finished: Bool) {
@@ -166,15 +168,13 @@ private extension Line {
     // MARK: - Boundaries
     
     private var leadingBoundary: Character? {
-        guard start > 0 else { return nil }
-        guard let index = string.index(string.startIndex, offsetBy: start - 1, limitedBy: string.endIndex) else { return nil }
-        return string[index]
+        guard hasStartBoundaryToParse else { return nil }
+        return string[string.index(before: startIndex)]
     }
 
     private var trailingBoundary: Character? {
-        guard end < string.count else { return nil }
-        guard let index = string.index(string.startIndex, offsetBy: end, limitedBy: string.endIndex) else { return nil }
-        return string[index]
+        guard hasEndBoundaryToParse else { return nil }
+        return string[endIndex]
     }
 
     private var boundariesMatch: Bool {
@@ -287,7 +287,7 @@ private let rules: [Character: String] = [
 
 // MARK: - Extensions
 
-private extension Collection where Self.Iterator.Element == Character {
+private extension Collection where Element == Character {
     func indexOf(cond: (Character) -> Bool, ignoringConds: [IgnoringCondition]) -> Index? {
         var ignoringCond: IgnoringCondition?
         return firstIndex(where: { (scalar) -> Bool in

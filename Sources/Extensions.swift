@@ -6,7 +6,11 @@ extension Collection where Element == Character {
     }
 
     func firstIndex(in set: CharacterSet) -> Index? {
-        firstIndex(where: set.contains)
+        firstIndex(where: set.contains(_:))
+    }
+
+    func firstIndex(notIn set: CharacterSet) -> Index? {
+        firstIndex(where: set.doesNotContain(_:))
     }
 }
 

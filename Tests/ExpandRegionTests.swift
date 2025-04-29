@@ -263,18 +263,18 @@ func testFunctionType() {
 @Test
 func testNames() {
     expect(thatThis: "  var |myVar: String")
-        .expands(to: "  var |myVar|: String")
-        .expands(to: "  var |myVar: String|")
+        ._expands(to: "  var |myVar|: String")
+        ._expands(to: "  var |myVar: String|")
 
     expect(thatThis: "  func |myFunc() async throws -> String")
-        .expands(to: "  func |myFunc|() async throws -> String")
-        .expands(to: "  func |myFunc()| async throws -> String")
+        ._expands(to: "  func |myFunc|() async throws -> String")
+        ._expands(to: "  func |myFunc()| async throws -> String")
 
     expect(thatThis: "  func myFunc|() async throws -> String")
         .expands(to: "  func |myFunc|() async throws -> String")
 
     expect(thatThis: "  func myFunc()| async throws -> String")
-        .expands(to: "  func |myFunc|() async throws -> String")
+        ._expands(to: "  func |myFunc|() async throws -> String")
 }
 
 // MARK: -
