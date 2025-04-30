@@ -25,7 +25,7 @@ public struct Line {
 // MARK: - RAW Representation
 
 extension Line {
-    fileprivate typealias Raw = (before: Substring, selected: Substring, after: Substring)
+    typealias Raw = (before: Substring, selected: Substring, after: Substring)
 
     @_spi(Testing)
     public init(testString: String) {
@@ -40,7 +40,6 @@ extension Line {
         let raw: Raw = string.partition(start: start, end: end)
         return "\(raw.before)|\(raw.selected)|\(raw.after)"
     }
-    
 }
 
 // MARK: - Equatable
@@ -53,7 +52,7 @@ extension Line: Equatable {
     }
 }
 
-private func makeRaw(_ string: String) -> Line.Raw? {
+func makeRaw(_ string: String) -> Line.Raw? {
     guard let firstDividerIndex = string.firstIndex(of: "|") else { return nil }
     let beforeFirstDivider = string.prefix(upTo: firstDividerIndex)
     let afterFirstDivider = string[string.index(after: firstDividerIndex)...]

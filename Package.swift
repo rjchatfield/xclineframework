@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "XCLineFramework",
     platforms: [
-        .macOS(.v10_15),
+        .macOS(.v12),
     ],
     products: [
         .library(
@@ -13,9 +13,15 @@ let package = Package(
             targets: ["XCLineFramework"]
         )
     ],
+    dependencies: [
+        .package(url: "https://github.com/jpsim/SourceKitten.git", .upToNextMajor(from: "0.37.0")),
+    ],
     targets: [
         .target(
-            name: "XCLineFramework"
+            name: "XCLineFramework",
+            dependencies: [
+                .product(name: "SourceKittenFramework", package: "SourceKitten"),
+            ]
         ),
         .testTarget(
             name: "XCLineFrameworkTests",
