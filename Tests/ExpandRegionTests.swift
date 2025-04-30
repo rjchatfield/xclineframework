@@ -4,344 +4,767 @@ import Testing
 @Test
 func testWordInHello() {
     // With space
-    assert(" |hello "  => " |hello| ")
-    assert(" h|ello "  => " |hello| ")
-    assert(" |h|ello " => " |hello| ")
-    assert(" hel|l|o " => " |hello| ")
-    assert(" hell|o| " => " |hello| ")
-    assert(" hello| "  => " |hello| ")
+    expect {
+        " |hello "
+        " h|ello "
+        " |h|ello "
+        " hel|l|o "
+        " hell|o| "
+        " hello| "
+    } expandsTo: {
+        " |hello| "
+    }
 
     // Without space
-    assert("|hello"  => "|hello|")
-    assert("h|ello"  => "|hello|")
-    assert("|h|ello" => "|hello|")
-    assert("hel|l|o" => "|hello|")
-    assert("hell|o|" => "|hello|")
-    assert("hello|"  => "|hello|")
+    expect {
+        "|hello"
+        "h|ello"
+        "|h|ello"
+        "hel|l|o"
+        "hell|o|"
+        "hello|"
+    } expandsTo: {
+        "|hello|"
+    }
 }
 
 @Test
 func testWordInQuotes() {
     // Leading \"
-    assert(" \"|hello "  => " \"|hello| ")
-    assert(" \"h|ello "  => " \"|hello| ")
-    assert(" \"|h|ello " => " \"|hello| ")
-    assert(" \"hel|l|o " => " \"|hello| ")
-    assert(" \"hell|o| " => " \"|hello| ")
-    assert(" \"hello| "  => " \"|hello| ")
+    expect {
+        " \"|hello "
+        " \"h|ello "
+        " \"|h|ello "
+        " \"hel|l|o "
+        " \"hell|o| "
+        " \"hello| "
+    } expandsTo: {
+        " \"|hello| "
+    }
     // trailing \"
-    assert(" |hello\" "  => " |hello|\" ")
-    assert(" h|ello\" "  => " |hello|\" ")
-    assert(" |h|ello\" " => " |hello|\" ")
-    assert(" hel|l|o\" " => " |hello|\" ")
-    assert(" hell|o|\" " => " |hello|\" ")
-    assert(" hello|\" "  => " |hello|\" ")
+    expect {
+        " |hello\" "
+        " h|ello\" "
+        " |h|ello\" "
+        " hel|l|o\" "
+        " hell|o|\" "
+        " hello|\" "
+    } expandsTo: {
+        " |hello|\" "
+    }
     // " either side
-    assert(" \"|hello\" "   => " \"|hello|\" ")
-    assert(" \"h|ello\" "   => " \"|hello|\" ")
-    assert(" \"|h|ello\" "  => " \"|hello|\" ")
-    assert(" \"hel|l|o\" "  => " \"|hello|\" ")
-    assert(" \"hell|o|\" "  => " \"|hello|\" ")
-    assert(" \"hello|\" "   => " \"|hello|\" ")
+    expect {
+        " \"|hello\" "
+        " \"h|ello\" "
+        " \"|h|ello\" "
+        " \"hel|l|o\" "
+        " \"hell|o|\" "
+        " \"hello|\" "
+    } expandsTo: {
+        " \"|hello|\" "
+    }
 }
 
 @Test
 func testWordInArray() {
     // []
-    assert(" [|hello] "  => " [|hello|] ")
-    assert(" [h|ello] "  => " [|hello|] ")
-    assert(" [|h|ello] " => " [|hello|] ")
-    assert(" [hel|l|o] " => " [|hello|] ")
-    assert(" [hell|o|] " => " [|hello|] ")
-    assert(" [hello|] "  => " [|hello|] ")
+    expect {
+        " [|hello] "
+        " [h|ello] "
+        " [|h|ello] "
+        " [hel|l|o] "
+        " [hell|o|] "
+        " [hello|] "
+    } expandsTo: {
+        " [|hello|] "
+        " |[hello]| "
+    }
     // [,]
-    assert(" [|hello, world] "  => " [|hello|, world] ")
-    assert(" [h|ello, world] "  => " [|hello|, world] ")
-    assert(" [|h|ello, world] " => " [|hello|, world] ")
-    assert(" [hel|l|o, world] " => " [|hello|, world] ")
-    assert(" [hell|o|, world] " => " [|hello|, world] ")
-    assert(" [hello|, world] "  => " [|hello|, world] ")
+    expect {
+        " [|hello, world] "
+        " [h|ello, world] "
+        " [|h|ello, world] "
+        " [hel|l|o, world] "
+        " [hell|o|, world] "
+        " [hello|, world] "
+    } expandsTo: {
+        " [|hello|, world] "
+        " [|hello, world|] "
+        " |[hello, world]| "
+    }
 }
 
 @Test
 func testArray() {
-    assert(" [hello|,| world] " => " [|hello, world|] ")
-    assert(" [hello|, world|] " => " [|hello, world|] ")
-    assert(" [hello, |world|] " => " [|hello, world|] ")
-    assert(" [|hello,| world] " => " [|hello, world|] ")
+    expect {
+        " [hello|,| world] "
+        " [hello|, world|] "
+        " [hello, |world|] "
+        " [|hello,| world] "
+    } expandsTo: {
+        " [|hello, world|] "
+        " |[hello, world]| "
+    }
 
-    assert("[hello.|world|, test]" => "[|hello.world|, test]")
-    assert("[|hello|.world, test]" => "[|hello.world|, test]")
-    assert("[|hello.|world, test]" => "[|hello.world|, test]")
-    assert("[hello|.|world, test]" => "[|hello.world|, test]")
+    expect {
+        "[hello.|world|, test]"
+        "[|hello|.world, test]"
+        "[|hello.|world, test]"
+        "[hello|.|world, test]"
+    } expandsTo: {
+        "[|hello.world|, test]"
+        "[|hello.world, test|]"
+        "|[hello.world, test]|"
+    }
 
-    assert("[hello, |world|.test]" => "[hello, |world.test|]")
-    assert("[hello, world.|test|]" => "[hello, |world.test|]")
-    assert("[hello, |world.|test]" => "[hello, |world.test|]")
-    assert("[hello, world|.|test]" => "[hello, |world.test|]")
+    expect {
+        "[hello, |world|.test]"
+        "[hello, world.|test|]"
+        "[hello, |world.|test]"
+        "[hello, world|.|test]"
+    } expandsTo: {
+        "[hello, |world.test|]"
+        "[|hello, world.test|]"
+        "|[hello, world.test]|"
+    }
 
-    expect(thatThis: "[[|]]")
-        .expands(to: "[|[]|]")
-        .expands(to: "|[[]]|")
+    expect {
+        "[|[]]"
+        "[[|]]"
+        "[[]|]"
+    } expandsTo: {
+        "[|[]|]"
+        "|[[]]|"
+    }
 
-    expect(thatThis: "[[|], []]")
-        .expands(to: "[|[]|, []]")
-        .expands(to: "[|[], []|]")
-    expect(thatThis: "[[], [|]]")
-        .expands(to: "[[], |[]|]")
-        .expands(to: "[|[], []|]")
+    expect {
+        "[|[], []]"
+        "[[|], []]"
+        "[[]|, []]".skip()
+    } expandsTo: {
+        "[|[]|, []]"
+        "[|[], []|]"
+        "|[[], []]|"
+    }
+    expect {
+        "[[], [|]]"
+        "[[], |[]|]"
+        "[|[], []|]"
+        "|[[], []]|"
+    }
 
-    expect(thatThis: "[[[]], [[|]], [[]]]")
-        .expands(to: "[[[]], [|[]|], [[]]]")
-        .expands(to: "[[[]], |[[]]|, [[]]]")
-        ._expands(to: "[|[[]], [[]], [[]]|]")
-        .expands(to: "|[[[]], [[]], [[]]]|")
+    expect {
+        "[[[]], [[|]], [[]]]"
+        "[[[]], [|[]|], [[]]]"
+        "[[[]], |[[]]|, [[]]]"
+        "[|[[]], [[]], [[]]|]".skip()
+        "|[[[]], [[]], [[]]]|"
+    }
 
-    assert("[[\"hello\"], |[]|]" => "[|[\"hello\"], []|]")
+    expect {
+        "[[\"hello\"], |[]|]"
+        "[|[\"hello\"], []|]"
+    }
 }
 
 @Test
 func testDictionary() {
-    assert(" [|hello:| world] " => " [|hello: world|] ")
-    assert(" [hello|:| world] " => " [|hello: world|] ")
-    assert(" [hello|: world|] " => " [|hello: world|] ")
-    assert(" [hello: |world|] " => " [|hello: world|] ")
-    expect(thatThis: "        \"|[\": \"]\",")
-        ._expands(to: "        \"|[|\": \"]\",")
-        .expands(to: "        |\"[\"|: \"]\",")
-        ._expands(to: "        |\"[\": \"]\"|,")
-        .expands(to: "        |\"[\": \"]\",|")
-        .expands(to: "        |\"[\": \"]\",|")
+    expect {
+        " [|hello:| world] "
+        " [hello|:| world] "
+        " [hello|: world|] "
+        " [hello: |world|] "
+    } expandsTo: {
+        " [|hello: world|] "
+        " |[hello: world]| "
+    }
+    expect {
+        "        \"|[\": \"]\","
+        "        \"|[|\": \"]\",".skip()
+        "        |\"[\"|: \"]\","
+        "        |\"[\": \"]\"|,".skip()
+        "        |\"[\": \"]\",|"
+        "        |\"[\": \"]\",|"
+    }
 }
 
 @Test
 func testFunc() {
-    expect(thatThis: "(foo: hell|o.world)")
-        .expands(to: "(foo: |hello|.world)")
-        .expands(to: "(foo: |hello.world|)")
-        .expands(to: "(|foo: hello.world|)")
+    expect {
+        "(foo: hell|o.world)"
+        "(foo: |hello|.world)"
+        "(foo: |hello.world|)"
+        "(|foo: hello.world|)"
+        "|(foo: hello.world)|"
+    }
+    expect {
+        "(foo: |hello|.world, bar: hello.world)"
+        "(foo: |hello.world|, bar: hello.world)"
+        "(|foo: hello.world|, bar: hello.world)"
+        "(|foo: hello.world, bar: hello.world|)"
+    }
+    expect {
+        "(fo|o: hello(bar: world))"
+        "(|foo|: hello(bar: world))"
+        "(|foo: hello(bar: world)|)"
+    }
+    expect {
+        "(foo: he|llo(bar: world))"
+        "(foo: |hello|(bar: world))"
+        "(foo: |hello(bar: world)|)"
+        "(|foo: hello(bar: world)|)"
+    }
+    expect {
+        "(foo: hello(bar: worl|d))"
+        "(foo: hello(bar: |world|))"
+        "(foo: hello(|bar: world|))"
+        "(foo: hello|(bar: world)|)"
+        "(foo: |hello(bar: world)|)"
+        "(|foo: hello(bar: world)|)"
+    }
+    expect {
+        "this([is, \"a te|st for\"].myCode)"
+        "this([is, \"a |test| for\"].myCode)"
+        "this([is, \"|a test for|\"].myCode)"
+    }
 
-    expect(thatThis: "(foo: |hello|.world, bar: hello.world)")
-        .expands(to: "(foo: |hello.world|, bar: hello.world)")
-        .expands(to: "(|foo: hello.world|, bar: hello.world)")
-        .expands(to: "(|foo: hello.world, bar: hello.world|)")
+    expect {
+        "this([is, \"a test fo|r\"].myCode)"
+        "this([is, \"a test |for|\"].myCode)"
+        "this([is, \"|a test for|\"].myCode)"
+        "this([is, |\"a test for\"|].myCode)"
+        "this([|is, \"a test for\"|].myCode)"
+        "this(|[is, \"a test for\"]|.myCode)"
+        "this(|[is, \"a test for\"].myCode|)"
+        "this|([is, \"a test for\"].myCode)|"
+        "|this([is, \"a test for\"].myCode)|"
+    }
 
-    expect(thatThis: "(fo|o: hello(bar: world))")
-        .expands(to: "(|foo|: hello(bar: world))")
-        .expands(to: "(|foo: hello(bar: world)|)")
+    expect {
+        "this([i|s, \"a test for\"].myCode)"
+        "this([|is|, \"a test for\"].myCode)"
+        "this([|is, \"a test for\"|].myCode)"
+    }
+    expect {
+        "foo(arg|1: String, arg2: String)"
+        "foo(|arg1|: String, arg2: String)"
+        "foo(|arg1: String|, arg2: String)"
+        "foo(|arg1: String, arg2: String|)"
+        "foo|(arg1: String, arg2: String)|"
+    }
+    expect {
+        "foo(arg1: String, |arg2|: String)"
+        "foo(arg1: String, |arg2: String|)"
+        "foo(|arg1: String, arg2: String|)"
+        "foo|(arg1: String, arg2: String)|"
+    }
 
-    expect(thatThis: "(foo: he|llo(bar: world))")
-        .expands(to: "(foo: |hello|(bar: world))")
-        .expands(to: "(foo: |hello(bar: world)|)")
-        .expands(to: "(|foo: hello(bar: world)|)")
+    expect {
+        "foo(in arg1: String, at |arg2|: String)"
+        "foo(in arg1: String, |at arg2: String|)"
+        "foo(|in arg1: String, at arg2: String|)"
+        "foo|(in arg1: String, at arg2: String)|"
+    }
 
-    expect(thatThis: "(foo: hello(bar: worl|d))")
-        .expands(to: "(foo: hello(bar: |world|))")
-        .expands(to: "(foo: hello(|bar: world|))")
-        .expands(to: "(foo: hello|(bar: world)|)")
-        .expands(to: "(foo: |hello(bar: world)|)")
-        .expands(to: "(|foo: hello(bar: world)|)")
-    expect(thatThis: "this([is, \"a te|st for\"].myCode)")
-        .expands(to: "this([is, \"a |test| for\"].myCode)")
-        .expands(to: "this([is, \"|a test for|\"].myCode)")
+    expect {
+        "String(chars[chars.index|(after: second)|..<chars.endIndex])"
+        "String(chars[|chars.index(after: second)|..<chars.endIndex])".skip()
+        "String(chars[|chars.index(after: second)..<chars.endIndex|])".skip()
+        "String(chars|[chars.index(after: second)..<chars.endIndex]|)"
+    }
+}
 
-    expect(thatThis: "this([is, \"a test fo|r\"].myCode)")
-        .expands(to: "this([is, \"a test |for|\"].myCode)")
-        .expands(to: "this([is, \"|a test for|\"].myCode)")
-        .expands(to: "this([is, |\"a test for\"|].myCode)")
-        .expands(to: "this([|is, \"a test for\"|].myCode)")
-        .expands(to: "this(|[is, \"a test for\"]|.myCode)")
-        .expands(to: "this(|[is, \"a test for\"].myCode|)")
-        .expands(to: "this|([is, \"a test for\"].myCode)|")
-        .expands(to: "|this([is, \"a test for\"].myCode)|")
-
-    expect(thatThis: "this([i|s, \"a test for\"].myCode)")
-        .expands(to: "this([|is|, \"a test for\"].myCode)")
-        .expands(to: "this([|is, \"a test for\"|].myCode)")
-    expect(thatThis: "foo(arg|1: String, arg2: String)")
-        .expands(to: "foo(|arg1|: String, arg2: String)")
-        .expands(to: "foo(|arg1: String|, arg2: String)")
-        .expands(to: "foo(|arg1: String, arg2: String|)")
-        .expands(to: "foo|(arg1: String, arg2: String)|")
-    expect(thatThis: "foo(arg1: String, |arg2|: String)")
-        .expands(to: "foo(arg1: String, |arg2: String|)")
-        .expands(to: "foo(|arg1: String, arg2: String|)")
-        .expands(to: "foo|(arg1: String, arg2: String)|")
-
-    expect(thatThis: "foo(in arg1: String, at |arg2|: String)")
-        .expands(to: "foo(in arg1: String, |at arg2: String|)")
-        .expands(to: "foo(|in arg1: String, at arg2: String|)")
-        .expands(to: "foo|(in arg1: String, at arg2: String)|")
-
-    expect(thatThis: "String(chars[chars.index|(after: second)|..<chars.endIndex])")
-        ._expands(to: "String(chars[|chars.index(after: second)|..<chars.endIndex])")
-        ._expands(to: "String(chars[|chars.index(after: second)..<chars.endIndex|])")
-        .expands(to: "String(chars|[chars.index(after: second)..<chars.endIndex]|)")
+@Test
+func testFunWithClosureArg() {
+    expect {
+        "func foo(|block: @escaping () -> Void) -> Bool"
+        "func foo(b|lock: @escaping () -> Void) -> Bool"
+        "func foo(b|l|ock: @escaping () -> Void) -> Bool"
+        "func foo(block|: @escaping () -> Void) -> Bool"
+    } expandsTo: {
+        "func foo(|block|: @escaping () -> Void) -> Bool"
+        "func foo(|block: @escaping () -> Void|) -> Bool".skip()
+        "func foo|(block: @escaping () -> Void)| -> Bool"
+    }
+    expect {
+        "func foo(block: |@escaping () -> Void) -> Bool".skip()
+        "func foo(block: @|escaping () -> Void) -> Bool"
+        "func foo(block: @escaping| () -> Void) -> Bool".skip()
+    } expandsTo: {
+        "func foo(block: |@escaping| () -> Void) -> Bool"
+        "func foo(block: |@escaping () -> Void|) -> Bool".skip()
+        "func foo(|block: @escaping () -> Void|) -> Bool"
+        "func foo|(block: @escaping () -> Void)| -> Bool"
+    }
+    expect {
+        "func foo(block: @escaping |() -> Void) -> Bool".skip()
+        "func foo(block: @escaping ()| -> Void) -> Bool".skip()
+        "func foo(block: @escaping |()| -> Void) -> Bool".skip()
+        "func foo(block: @escaping () -> |Void|) -> Bool".skip()
+    } expandsTo: {
+        "func foo(block: @escaping |() -> Void|) -> Bool"
+        "func foo(block: |@escaping () -> Void|) -> Bool"
+        "func foo(|block: @escaping () -> Void|) -> Bool"
+        "func foo|(block: @escaping () -> Void)| -> Bool"
+    }
+    expect {
+        "func foo(block: @escaping (|) -> Void) -> Bool"
+    } expandsTo: {
+        "func foo(block: @escaping |()| -> Void) -> Bool"
+        "func foo(block: @escaping |() -> Void|) -> Bool".skip()
+    }
+    expect {
+        "func foo(block: @escaping () -> |Void) -> Bool".skip()
+        "func foo(block: @escaping () -> V|oid) -> Bool"
+        "func foo(block: @escaping () -> Void|) -> Bool"
+    } expandsTo: {
+        "func foo(block: @escaping () -> |Void|) -> Bool"
+        "func foo(block: @escaping |() -> Void|) -> Bool".skip()
+    }
+    expect {
+        "func foo(block: @escaping () -> Void)| -> Bool".skip()
+    } expandsTo: {
+        "func foo|(block: @escaping () -> Void)| -> Bool"
+    }
+    expect {
+        "func foo(block: @escaping () -> Void) -> |Bool".skip()
+        "func foo(block: @escaping () -> Void) -> B|ool"
+        "func foo(block: @escaping () -> Void) -> Bool|".skip()
+    } expandsTo: {
+        "func foo(block: @escaping () -> Void) -> |Bool|"
+    }
 }
 
 @Test
 func testPairs_params() {
-    assert("(|a|:b,c:d,e:f)" => "(|a:b|,c:d,e:f)")
-    assert("(a:|b|,c:d,e:f)" => "(|a:b|,c:d,e:f)")
-    assert("(a:b,|c|:d,e:f)" => "(a:b,|c:d|,e:f)")
-    assert("(a:b,c:|d|,e:f)" => "(a:b,|c:d|,e:f)")
-    assert("(a:b,c:d,|e|:f)" => "(a:b,c:d,|e:f|)")
-    assert("(a:b,c:d,e:|f|)" => "(a:b,c:d,|e:f|)")
-
-    assert("(|a|: b, c: d, e: f)" => "(|a: b|, c: d, e: f)")
-    assert("(a: |b|, c: d, e: f)" => "(|a: b|, c: d, e: f)")
-    assert("(a: b, |c|: d, e: f)" => "(a: b, |c: d|, e: f)")
-    assert("(a: b, c: |d|, e: f)" => "(a: b, |c: d|, e: f)")
-    assert("(a: b, c: d, |e|: f)" => "(a: b, c: d, |e: f|)")
-    assert("(a: b, c: d, e: |f|)" => "(a: b, c: d, |e: f|)")
+    expect {
+        "(|a|:b,c:d,e:f)"
+        "(a|:|b,c:d,e:f)"
+        "(a:|b|,c:d,e:f)"
+    } expandsTo: {
+        "(|a:b|,c:d,e:f)"
+        "(|a:b,c:d,e:f|)"
+        "|(a:b,c:d,e:f)|"
+    }
+    expect {
+        "(a:b,|c|:d,e:f)"
+        "(a:b,c|:|d,e:f)"
+        "(a:b,c:|d|,e:f)"
+    } expandsTo: {
+        "(a:b,|c:d|,e:f)"
+    }
+    expect {
+        "(a:b,c:d,|e|:f)"
+        "(a:b,c:d,e:|f|)"
+    } expandsTo: {
+        "(a:b,c:d,|e:f|)"
+    }
+    expect {
+        "(|a|: b, c: d, e: f)"
+        "(a: |b|, c: d, e: f)"
+    } expandsTo: {
+        "(|a: b|, c: d, e: f)"
+    }
+    expect {
+        "(a: b, |c|: d, e: f)"
+        "(a: b, c: |d|, e: f)"
+    } expandsTo: {
+        "(a: b, |c: d|, e: f)"
+    }
+    expect {
+        "(a: b, c: d, |e|: f)"
+        "(a: b, c: d, e: |f|)"
+    } expandsTo: {
+        "(a: b, c: d, |e: f|)"
+    }
 }
 
 @Test
 func testPairs_dict() {
-    assert("[|a|:b,c:d,e:f]" => "[|a:b|,c:d,e:f]")
-    assert("[a:|b|,c:d,e:f]" => "[|a:b|,c:d,e:f]")
-    assert("[a:b,|c|:d,e:f]" => "[a:b,|c:d|,e:f]")
-    assert("[a:b,c:|d|,e:f]" => "[a:b,|c:d|,e:f]")
-    assert("[a:b,c:d,|e|:f]" => "[a:b,c:d,|e:f|]")
-    assert("[a:b,c:d,e:|f|]" => "[a:b,c:d,|e:f|]")
+    expect {
+        "[|a:b,c:d,e:f]"
+        "[a|:b,c:d,e:f]"
+    } expandsTo: {
+        "[|a|:b,c:d,e:f]"
+    }
+    expect {
+        "[a:|b,c:d,e:f]"
+        "[a:b|,c:d,e:f]"
+    } expandsTo: {
+        "[a:|b|,c:d,e:f]"
+    }
+    expect {
+        "[a: |b, c: d, e: f]"
+        "[a: b|, c: d, e: f]"
+    } expandsTo: {
+        "[a: |b|, c: d, e: f]"
+    }
 
-    assert("[|a|: b, c: d, e: f]" => "[|a: b|, c: d, e: f]")
-    assert("[a: |b|, c: d, e: f]" => "[|a: b|, c: d, e: f]")
-    assert("[a: b, |c|: d, e: f]" => "[a: b, |c: d|, e: f]")
-    assert("[a: b, c: |d|, e: f]" => "[a: b, |c: d|, e: f]")
-    assert("[a: b, c: d, |e|: f]" => "[a: b, c: d, |e: f|]")
-    assert("[a: b, c: d, e: |f|]" => "[a: b, c: d, |e: f|]")
+    expect {
+        "[|a|:b,c:d,e:f]"
+        "[a:|b|,c:d,e:f]"
+    } expandsTo: {
+        "[|a:b|,c:d,e:f]"
+        "[|a:b,c:d,e:f|]"
+        "|[a:b,c:d,e:f]|"
+    }
+    expect {
+        "[a:b,|c|:d,e:f]"
+        "[a:b,|c:|d,e:f]"
+        "[a:b,c:|d|,e:f]"
+    } expandsTo: {
+        "[a:b,|c:d|,e:f]"
+        "[|a:b,c:d,e:f|]"
+        "|[a:b,c:d,e:f]|"
+    }
+    expect {
+        "[a:b,c:d,|e|:f]"
+        "[a:b,c:d,e:|f|]"
+    } expandsTo: {
+        "[a:b,c:d,|e:f|]"
+        "[|a:b,c:d,e:f|]"
+        "|[a:b,c:d,e:f]|"
+    }
+
+    expect {
+        "[|a|: b, c: d, e: f]"
+        "[a: |b|, c: d, e: f]"
+    } expandsTo: {
+        "[|a: b|, c: d, e: f]"
+    }
+    expect {
+        "[a: b, |c|: d, e: f]"
+        "[a: b, c: |d|, e: f]"
+    } expandsTo: {
+        "[a: b, |c: d|, e: f]"
+    }
+    expect {
+        "[a: b, c: d, |e|: f]"
+        "[a: b, c: d, e: |f|]"
+    } expandsTo: {
+        "[a: b, c: d, |e: f|]"
+    }
 }
 
 @Test
 func testPairs_generics() {
-    assert("<|a|:b,c:d,e:f>" => "<|a:b|,c:d,e:f>")
-    assert("<a:|b|,c:d,e:f>" => "<|a:b|,c:d,e:f>")
-    assert("<a:b,|c|:d,e:f>" => "<a:b,|c:d|,e:f>")
-    assert("<a:b,c:|d|,e:f>" => "<a:b,|c:d|,e:f>")
-    assert("<a:b,c:d,|e|:f>" => "<a:b,c:d,|e:f|>")
-    assert("<a:b,c:d,e:|f|>" => "<a:b,c:d,|e:f|>")
+    expect {
+        "<|a|:b,c:d,e:f>"
+        "<a:|b|,c:d,e:f>"
+    } expandsTo: {
+        "<|a:b|,c:d,e:f>"
+    }
+    expect {
+        "<a:b,|c|:d,e:f>"
+        "<a:b,c:|d|,e:f>"
+    } expandsTo: {
+        "<a:b,|c:d|,e:f>"
+    }
+    expect {
+        "<a:b,c:d,|e|:f>"
+        "<a:b,c:d,e:|f|>"
+    } expandsTo: {
+        "<a:b,c:d,|e:f|>"
+    }
 
-    assert("<|a|: b, c: d, e: f>" => "<|a: b|, c: d, e: f>")
-    assert("<a: |b|, c: d, e: f>" => "<|a: b|, c: d, e: f>")
-    assert("<a: b, |c|: d, e: f>" => "<a: b, |c: d|, e: f>")
-    assert("<a: b, c: |d|, e: f>" => "<a: b, |c: d|, e: f>")
-    assert("<a: b, c: d, |e|: f>" => "<a: b, c: d, |e: f|>")
-    assert("<a: b, c: d, e: |f|>" => "<a: b, c: d, |e: f|>")
+    expect {
+        "<|a|: b, c: d, e: f>"
+        "<a: |b|, c: d, e: f>"
+    } expandsTo: {
+        "<|a: b|, c: d, e: f>"
+    }
+    expect {
+        "<a: b, |c|: d, e: f>"
+        "<a: b, c: |d|, e: f>"
+    } expandsTo: {
+        "<a: b, |c: d|, e: f>"
+    }
+    expect {
+        "<a: b, c: d, |e|: f>"
+        "<a: b, c: d, e: |f|>"
+    } expandsTo: {
+        "<a: b, c: d, |e: f|>"
+    }
+}
+
+@Test
+func testNestedGenerics() {
+    expect {
+        "|Dictionary<String, Array<Int>>".skip()
+        "Dict|ionary<String, Array<Int>>"
+        "Dictionary|<String, Array<Int>>"
+    } expandsTo: {
+        "|Dictionary|<String, Array<Int>>"
+        "|Dictionary<String, Array<Int>>|"
+    }
+    expect {
+        "Dictionary<|String, Array<Int>>"
+        "Dictionary<Str|ing, Array<Int>>"
+        "Dictionary<String|, Array<Int>>"
+    } expandsTo: {
+        "Dictionary<|String|, Array<Int>>"
+        "Dictionary<|String, Array<Int>|>"
+        "Dictionary|<String, Array<Int>>|"
+        "|Dictionary<String, Array<Int>>|"
+    }
+    expect {
+        "Dictionary<String, |Array<Int>>".skip()
+        "Dictionary<String, Ar|ray<Int>>"
+        "Dictionary<String, Array|<Int>>"
+    } expandsTo: {
+        "Dictionary<String, |Array|<Int>>"
+        "Dictionary<String, |Array<Int>|>"
+        "Dictionary<|String, Array<Int>|>"
+        "Dictionary|<String, Array<Int>>|"
+        "|Dictionary<String, Array<Int>>|"
+    }
+    expect {
+        "Dictionary<String, Array<|Int>>"
+        "Dictionary<String, Array<I|nt>>"
+        "Dictionary<String, Array<Int|>>"
+    } expandsTo: {
+        "Dictionary<String, Array<|Int|>>"
+        "Dictionary<String, Array|<Int>|>"
+        "Dictionary<String, |Array<Int>|>"
+        "Dictionary<|String, Array<Int>|>"
+        "Dictionary|<String, Array<Int>>|"
+        "|Dictionary<String, Array<Int>>|"
+    }
+    expect {
+        "Dictionary<String, Array<Int>|>"
+        "Dictionary<String, Array|<Int>|>".skip()
+        "Dictionary<String, |Array<Int>|>"
+    }
+    expect {
+        "Dictionary<String, Array<Int>>|"
+        "Dictionary|<String, Array<Int>>|".skip()
+        "|Dictionary<String, Array<Int>>|"
+    }
 }
 
 @Test
 func testCase() {
-    expect(thatThis: "case (_?, nil|): return .orderedAscending")
-        .expands(to: "case (_?, |nil|): return .orderedAscending")
-        .expands(to: "case (|_?, nil|): return .orderedAscending")
-        .expands(to: "case |(_?, nil)|: return .orderedAscending")
-        .expands(to: "|case (_?, nil): return .orderedAscending|")
+    expect {
+        "case (_?, nil|): return .orderedAscending"
+        "case (_?, |nil|): return .orderedAscending"
+        "case (|_?, nil|): return .orderedAscending"
+        "case |(_?, nil)|: return .orderedAscending"
+        "|case (_?, nil): return .orderedAscending|"
+    }
 }
 
 @Test
 func testAssign() {
-    expect(thatThis: "let new.line = cu|rrentLine.expandRegion()")
-        .expands(to: "let new.line = |currentLine|.expandRegion()")
-        ._expands(to: "let new.line = |currentLine.expandRegion()|")
-
-    expect(thatThis: "let ne|w.line = currentLine.expandRegion()")
-        .expands(to: "let |new|.line = currentLine.expandRegion()")
-        ._expands(to: "let |new.line| = currentLine.expandRegion()")
+    expect {
+        "let new.line = |currentLine.expandRegion()".skip()
+        "let new.line = current|Line.expandRegion()"
+        "let new.line = |current|Line.expandRegion()".skip()
+        "let new.line = current|Line|.expandRegion()"
+        "let new.line = currentLine|.expandRegion()"
+    } expandsTo: {
+        "let new.line = |currentLine|.expandRegion()"
+        "let new.line = |currentLine.expandRegion()|".skip()
+    }
+    expect {
+        "let ne|w.line = currentLine.expandRegion()"
+        "let |new|.line = currentLine.expandRegion()"
+        "let |new.line| = currentLine.expandRegion()".skip()
+    }
 }
 
 @Test
 func testFunctionType() {
-    expect(thatThis: "func foo(f: @escaping (H|ello) -> World) -> Boom")
-        .expands(to: "func foo(f: @escaping (|Hello|) -> World) -> Boom")
-        .expands(to: "func foo(f: @escaping |(Hello)| -> World) -> Boom")
-        ._expands(to: "func foo(f: |@escaping (Hello) -> World|) -> Boom")
-        .expands(to: "func foo(|f: @escaping (Hello) -> World|) -> Boom")
-        .expands(to: "func foo|(f: @escaping (Hello) -> World)| -> Boom")
+    expect {
+        "func foo(f: @escaping (H|ello) -> World) -> Boom"
+        "func foo(f: @escaping (|Hello|) -> World) -> Boom"
+        "func foo(f: @escaping |(Hello)| -> World) -> Boom"
+        "func foo(f: |@escaping (Hello) -> World|) -> Boom".skip()
+        "func foo(|f: @escaping (Hello) -> World|) -> Boom"
+        "func foo|(f: @escaping (Hello) -> World)| -> Boom"
+    }
 }
 
 @Test
 func testNames() {
-    expect(thatThis: "  var |myVar: String")
-        ._expands(to: "  var |myVar|: String")
-        ._expands(to: "  var |myVar: String|")
-
-    expect(thatThis: "  func |myFunc() async throws -> String")
-        ._expands(to: "  func |myFunc|() async throws -> String")
-        ._expands(to: "  func |myFunc()| async throws -> String")
-
-    expect(thatThis: "  func myFunc|() async throws -> String")
-        .expands(to: "  func |myFunc|() async throws -> String")
-
-    expect(thatThis: "  func myFunc()| async throws -> String")
-        ._expands(to: "  func |myFunc|() async throws -> String")
-}
-
-// MARK: -
-
-@discardableResult
-private func assert(
-    _ tuple: (initialString: String, expectedString: String),
-    ignored: Bool = false,
-    sourceLocation: SourceLocation = #_sourceLocation
-) -> LineTestBuilder {
-    print("")
-    let initial = Line(testString: tuple.initialString)
-    let expected = Line(testString: tuple.expectedString)
-    print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
-    let result = initial.expandedRegion()
-    let emoji = ignored ? "🐛" : result == expected ? " 😃" : " 👿"
-    let comment: Comment = "\(initial.rawDescription) -> \(expected.rawDescription) \(emoji) \(result.rawDescription)"
-    print("\(emoji) \(result.rawDescription)")
-    if !ignored, result != expected {
-        Issue.record(comment, sourceLocation: sourceLocation)
+    expect {
+        "  var |myVar: String".skip()
+        "  var my|Var: String"
+        "  var |my|Var: String".skip()
+        "  var my|Var|: String"
+        "  var myVar|: String"
+    } expandsTo: {
+        "  var |myVar|: String"
+        "  var |myVar: String|".skip()
     }
-    return LineTestBuilder(string: tuple.expectedString)
+
+    expect {
+        "  func |myFunc() async throws -> String".skip()
+        "  func my|Func() async throws -> String"
+        "  func |my|Func() async throws -> String".skip()
+        "  func my|Func|() async throws -> String"
+        "  func myFunc|() async throws -> String"
+    } expandsTo: {
+        "  func |myFunc|() async throws -> String"
+        "  func |myFunc()| async throws -> String".skip()
+    }
+
+    expect {
+        "  func myFunc|() async throws -> String"
+        "  func |myFunc|() async throws -> String"
+        "  func |myFunc()| async throws -> String".skip()
+    }
+
+    expect {
+        "  func myFunc()| async throws -> String"
+        "  func |myFunc|() async throws -> String".skip()
+    }
 }
 
-@discardableResult
-private func expect(thatThis initial: String) -> LineTestBuilder {
-    return LineTestBuilder(string: initial)
-}
-
-/**
- Disabled test
- */
-@discardableResult
-private func _expect(thatThis initial: String) -> LineTestBuilder {
-    return LineTestBuilder(string: nil)
+@Test
+func testTernary() async throws {
+    expect {
+        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop""#.skip()
+        #"let emoji = initial|Case.skip ? "bug" : result == expected ? " yep" : " nop""#
+        #"let emoji = initialCase|.skip ? "bug" : result == expected ? " yep" : " nop""#
+    } expandsTo: {
+        #"let emoji = |initialCase|.skip ? "bug" : result == expected ? " yep" : " nop""#
+        #"let emoji = |initialCase.skip| ? "bug" : result == expected ? " yep" : " nop""#.skip()
+        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
+        #"|let emoji = initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#
+    }
+    expect {
+        #"let emoji = initialCase.skip ? "|bug" : result == expected ? " yep" : " nop""#
+        #"let emoji = initialCase.skip ? "b|ug" : result == expected ? " yep" : " nop""#
+        #"let emoji = initialCase.skip ? "bug|" : result == expected ? " yep" : " nop""#
+    } expandsTo: {
+        #"let emoji = initialCase.skip ? "|bug|" : result == expected ? " yep" : " nop""#
+        #"let emoji = initialCase.skip ? |"bug"| : result == expected ? " yep" : " nop""#
+        #"let emoji = initialCase.skip ? |"bug"| : result == expected ? " yep" : " nop""#.skip()
+        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
+    }
+    expect {
+        #"let emoji = initialCase.skip ? "bug" : |result == expected ? " yep" : " nop""#.skip()
+        #"let emoji = initialCase.skip ? "bug" : re|sult == expected ? " yep" : " nop""#
+        #"let emoji = initialCase.skip ? "bug" : result| == expected ? " yep" : " nop""#.skip()
+    } expandsTo: {
+        #"let emoji = initialCase.skip ? "bug" : |result| == expected ? " yep" : " nop""#
+        #"let emoji = initialCase.skip ? "bug" : |result == expected| ? " yep" : " nop""#.skip()
+        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
+    }
+    expect {
+        #"let emoji = initialCase.skip ? "bug" : result |== expected ? " yep" : " nop""#.skip()
+        #"let emoji = initialCase.skip ? "bug" : result =|= expected ? " yep" : " nop""#
+        #"let emoji = initialCase.skip ? "bug" : result ==| expected ? " yep" : " nop""#.skip()
+        #"let emoji = initialCase.skip ? "bug" : result =|=| expected ? " yep" : " nop""#.skip()
+        #"let emoji = initialCase.skip ? "bug" : result |=|= expected ? " yep" : " nop""#.skip()
+    } expandsTo: {
+        #"let emoji = initialCase.skip ? "bug" : result |==| expected ? " yep" : " nop""#
+        #"let emoji = initialCase.skip ? "bug" : |result == expected| ? " yep" : " nop""#.skip()
+        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
+    }
+    expect {
+        #"let emoji = initialCase.skip ? "bug" : result == expected ? " |yep" : " nop""#
+        #"let emoji = initialCase.skip ? "bug" : result == expected ? " y|ep" : " nop""#
+        #"let emoji = initialCase.skip ? "bug" : result == expected ? " yep|" : " nop""#
+    } expandsTo: {
+        #"let emoji = initialCase.skip ? "bug" : result == expected ? " |yep|" : " nop""#
+        #"let emoji = initialCase.skip ? "bug" : result == expected ? "| yep|" : " nop""#.skip()
+        #"let emoji = initialCase.skip ? "bug" : result == expected ? |" yep"| : " nop""#
+        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
+    }
+    expect {
+        #"let emoji = initialCase.skip ? "bug" : result == expected ? "| yep" : " nop""#
+        #"let emoji = initialCase.skip ? "bug" : result == expected ? "| yep|" : " nop""#.skip()
+    }
 }
 
 // MARK: -
 
-struct LineTestBuilder {
-    let string: String?
 
-    @discardableResult
-    func expands(
-        to other: String,
-        ignored: Bool = false,
-        sourceLocation: SourceLocation = #_sourceLocation
-    ) -> LineTestBuilder {
-        if let string {
-            return assert(string => other, ignored: ignored, sourceLocation: sourceLocation)
-        } else {
-            return LineTestBuilder(string: nil)
+/// DSL for test scenarios
+/// - Parameters:
+///   - initialCases: All of these strings should expand to the first string in `expandsTo:`. Failures will show up inline.
+///   - expectations: All of these strings should expand one after another. Failures will show up inline.
+private func expect(
+    @LineTestResultBuilder initialCases: () -> [TestInfo] = { [] },
+    @LineTestResultBuilder expandsTo expectations: () -> [TestInfo],
+    sourceLocation: SourceLocation = #_sourceLocation
+) {
+    let expectations = expectations()
+    let initialCases = initialCases()
+
+    // Test all initial cases
+    guard let firstExpectedString = expectations.first?.string else {
+        Issue.record("Missing expectations", sourceLocation: sourceLocation)
+        return
+    }
+    for initialCase in initialCases {
+        print("")
+        let initial = Line(testString: initialCase.string)
+        let expected = Line(testString: firstExpectedString)
+        print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
+        let result = initial.expandedRegion()
+        let emoji = initialCase.skip ? "🐛" : result == expected ? " 😃" : " 👿"
+        print("\(emoji) \(result.rawDescription)")
+        if !initialCase.skip, result != expected {
+            Issue.record("\(result.rawDescription) -- (expected: `\(expected.rawDescription)`)", sourceLocation: initialCase.sourceLocation)
+        }
+        if initialCase.skip, result == expected {
+            Issue.record("🎉 BUG SQUASHED! 🐛 Remove `.skip()`", sourceLocation: initialCase.sourceLocation)
         }
     }
 
-    @discardableResult
-    func _expands(
-        to other: String,
-        sourceLocation: SourceLocation = #_sourceLocation
-    ) -> LineTestBuilder {
-        return expands(to: other, ignored: true, sourceLocation: sourceLocation)
+    // Test all remaining cases
+    var previousLineTest: TestInfo?
+    for lineTest in expectations {
+        defer { previousLineTest = lineTest }
+        guard let previousLineTest else { continue }
+        print("")
+        let initial = Line(testString: previousLineTest.string)
+        let expected = Line(testString: lineTest.string)
+        print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
+        let result = initial.expandedRegion()
+        let emoji = lineTest.skip ? "🐛" : result == expected ? " 😃" : " 👿"
+        print("\(emoji) \(result.rawDescription)")
+        if !lineTest.skip, result != expected {
+            Issue.record("\(result.rawDescription) -- (expected: `\(expected.rawDescription)`)", sourceLocation: lineTest.sourceLocation)
+        }
+        if lineTest.skip, result == expected {
+            Issue.record("🎉 BUG SQUASHED! 🐛 Remove `.skip()`", sourceLocation: lineTest.sourceLocation)
+        }
     }
 }
 
 // MARK: -
 
-infix operator =>
-func => (lhs: String, rhs: String) -> (String, String) {
-    return (lhs, rhs)
+private struct TestInfo {
+    let string: String
+    let skip: Bool
+    let sourceLocation: SourceLocation
+}
+
+// MARK: -
+
+@resultBuilder
+private enum LineTestResultBuilder {
+    /// Capture source location
+    static func buildExpression(_ expression: String, sourceLocation: SourceLocation = #_sourceLocation) -> TestInfo {
+        TestInfo(string: expression, skip: false, sourceLocation: sourceLocation)
+    }
+    /// Useful for `.skip()`
+    static func buildExpression(_ expression: TestInfo) -> TestInfo {
+        expression
+    }
+    /// Note: No complicated result builder features (eg. if/else, loops)
+    static func buildBlock(_ components: TestInfo...) -> [TestInfo] {
+        components
+    }
+}
+
+// MARK: -
+
+private extension String {
+    func skip(sourceLocation: SourceLocation = #_sourceLocation) -> TestInfo {
+        TestInfo(string: self, skip: true, sourceLocation: sourceLocation)
+    }
 }
