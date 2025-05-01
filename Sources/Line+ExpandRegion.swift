@@ -1,5 +1,25 @@
 import Foundation
 
+extension Buffer {
+    public func classicExpandedRegion() -> Buffer {
+        var line = Line(
+            string: completeBuffer,
+            startColumn: selections[0].start.column,
+            endColumn: selections[0].end.column
+        )
+        let result = line.expandedRegion()
+        return Buffer(
+            completeBuffer: result.string,
+            selections: [
+                SourceTextRange(
+                    start: SourceTextPosition(line: 0, column: result.start),
+                    end: SourceTextPosition(line: 0, column: result.end)
+                ),
+            ]
+        )
+    }
+}
+
 extension Line {
     public func expandedRegion() -> Line {
         var result = self

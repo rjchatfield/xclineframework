@@ -13,21 +13,9 @@ let package = Package(
             targets: ["XCLineFramework"]
         )
     ],
-    dependencies: [
-        .package(url: "https://github.com/jpsim/SourceKitten.git", .upToNextMajor(from: "0.37.0")),
-        .package(url: "https://github.com/swiftlang/swift-syntax", "509.0.0"..<"602.0.0"),
-    ],
     targets: [
         .target(
-            name: "XCLineFramework",
-            dependencies: [
-                .product(name: "SourceKittenFramework", package: "SourceKitten"),
-                .product(name: "SwiftDiagnostics", package: "swift-syntax"),
-                .product(name: "SwiftOperators", package: "swift-syntax"),
-                .product(name: "SwiftParserDiagnostics", package: "swift-syntax"),
-                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
-            ]
+            name: "XCLineFramework"
         ),
         .testTarget(
             name: "XCLineFrameworkTests",
