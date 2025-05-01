@@ -75,8 +75,8 @@ import Testing
         #""h|ello world""#
         #""|h|ello world""#
         #""hel|l|o world""#
-        #""hell|o| world""#.notYetSupported()
-        #""hello| world""#.notYetSupported()
+        #""hell|o| world""#
+        #""hello| world""#
     } expandsTo: {
         #""|hello| world""#
         #""|hello world|""#
@@ -187,7 +187,7 @@ import Testing
 @Test func testSimpleClosure() {
     expect {
         "{ |param in"
-        "{ |param| in".notYetSupported()
+        "{ |param| in"
         "{ |param in|".notYetSupported()
     }
 }
@@ -195,7 +195,7 @@ import Testing
 @Test func testClosureWithMultipleParams() {
     expect {
         "{ param, |p2 in"
-        "{ param, |p2| in".notYetSupported()
+        "{ param, |p2| in"
         "{ |param, p2| in".notYetSupported()
         "{ |param, p2 in|".notYetSupported()
     }
@@ -236,7 +236,7 @@ import Testing
 @Test func testPropertyDeclaration() {
     expect {
         "var name: |String"
-        "var name: |String|".notYetSupported()
+        "var name: |String|"
         "var |name: String|".notYetSupported()
         "|var name: String|"
     }
@@ -245,7 +245,7 @@ import Testing
 @Test func testGuardStatement() {
     expect {
         "guard let |value = optional as? AnyObject"
-        "guard let |value| = optional as? AnyObject".notYetSupported()
+        "guard let |value| = optional as? AnyObject"
         "guard |let value| = optional as? AnyObject".notYetSupported()
         "guard |let value = optional as? AnyObject|".notYetSupported()
     }
@@ -315,7 +315,8 @@ private func expect(
         let initial = Buffer(testString: initialCase.string)
         let expected = Buffer(testString: firstExpectedString)
         print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
-        let result = initial.classicExpandedRegion()
+        var mutableInitial = initial
+        let result = mutableInitial.expandedSelection()
         let emoji = initialCase.skip ? "🐛" : result == expected ? " 😃" : " 👿"
         print("\(emoji) \(result.rawDescription)")
         if !initialCase.skip, result != expected {
@@ -338,7 +339,8 @@ private func expect(
         let initial = Buffer(testString: previousLineTest.string)
         let expected = Buffer(testString: lineTest.string)
         print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
-        let result = initial.classicExpandedRegion()
+        var mutableInitial = initial
+        let result = mutableInitial.expandedSelection()
         let emoji = lineTest.skip ? "🐛" : result == expected ? " 😃" : " 👿"
         print("\(emoji) \(result.rawDescription)")
         if !lineTest.skip, result != expected {
