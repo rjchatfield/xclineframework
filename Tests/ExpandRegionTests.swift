@@ -1,8 +1,20 @@
 import Testing
 @_spi(Testing) import XCLineFramework
 
-@Test
-func testWordInHello() {
+@Test func focusedScenario() {
+    let initial = Buffer(testString: #""h|ello world""#)
+    var result = initial
+    result.expandSelections()
+    #expect(result.rawDescription == #""|hello| world""#)
+
+    result.expandSelections()
+    #expect(result.rawDescription == #""|hello world|""#)
+
+    result.expandSelections()
+    #expect(result.rawDescription == #"|"hello world"|"#)
+}
+
+@Test func allCases() {
     // With space
     expect {
         " |hello "
@@ -26,21 +38,19 @@ func testWordInHello() {
     } expandsTo: {
         "|hello|"
     }
-}
 
-@Test
-func testWordInQuotes() {
     // Leading \"
     expect {
-        " \"|hello "
-        " \"h|ello "
-        " \"|h|ello "
-        " \"hel|l|o "
-        " \"hell|o| "
-        " \"hello| "
+        #" "|hello "#
+        #" "h|ello "#
+        #" "|h|ello "#
+        #" "hel|l|o "#
+        #" "hell|o| "#
+        #" "hello| "#
     } expandsTo: {
-        " \"|hello| "
+        #" "|hello| "#
     }
+
     // trailing \"
     expect {
         " |hello\" "
@@ -52,21 +62,45 @@ func testWordInQuotes() {
     } expandsTo: {
         " |hello|\" "
     }
+
     // " either side
     expect {
-        " \"|hello\" "
-        " \"h|ello\" "
-        " \"|h|ello\" "
-        " \"hel|l|o\" "
-        " \"hell|o|\" "
-        " \"hello|\" "
+        #""|hello""#
+        #""h|ello""#
+        #""|h|ello""#
+        #""hel|l|o""#
+        #""hell|o|""#
+        #""hello|""#
     } expandsTo: {
-        " \"|hello|\" "
+        #""|hello|""#
+        #"|"hello"|"#
     }
-}
 
-@Test
-func testWordInArray() {
+    expect {
+        #""|hello world""#
+        #""h|ello world""#
+        #""|h|ello world""#
+        #""hel|l|o world""#
+        #""hell|o| world""#
+        #""hello| world""#
+    } expandsTo: {
+        #""|hello| world""#
+        #""|hello world|""#
+        #"|"hello world"|"#
+    }
+
+    expect {
+        #" "|hello" "#
+        #" "h|ello" "#
+        #" "|h|ello" "#
+        #" "hel|l|o" "#
+        #" "hell|o|" "#
+        #" "hello|" "#
+    } expandsTo: {
+        #" "|hello|" "#
+        #" |"hello"| "#
+    }
+
     // []
     expect {
         " [|hello] "
@@ -92,10 +126,7 @@ func testWordInArray() {
         " [|hello, world|] "
         " |[hello, world]| "
     }
-}
 
-@Test
-func testArray() {
     expect {
         " [hello|,| world] "
         " [hello|, world|] "
@@ -140,7 +171,7 @@ func testArray() {
     expect {
         "[|[], []]"
         "[[|], []]"
-        "[[]|, []]".skip()
+        "[[]|, []]"
     } expandsTo: {
         "[|[]|, []]"
         "[|[], []|]"
@@ -165,10 +196,7 @@ func testArray() {
         "[[\"hello\"], |[]|]"
         "[|[\"hello\"], []|]"
     }
-}
 
-@Test
-func testDictionary() {
     expect {
         " [|hello:| world] "
         " [hello|:| world] "
@@ -186,10 +214,7 @@ func testDictionary() {
         "        |\"[\": \"]\",|"
         "        |\"[\": \"]\",|"
     }
-}
 
-@Test
-func testFunc() {
     expect {
         "(foo: hell|o.world)"
         "(foo: |hello|.world)"
@@ -268,14 +293,11 @@ func testFunc() {
 
     expect {
         "String(chars[chars.index|(after: second)|..<chars.endIndex])"
-        "String(chars[|chars.index(after: second)|..<chars.endIndex])".skip()
+        "String(chars[|chars.index(after: second)|..<chars.endIndex])"
         "String(chars[|chars.index(after: second)..<chars.endIndex|])".skip()
         "String(chars|[chars.index(after: second)..<chars.endIndex]|)"
     }
-}
 
-@Test
-func testFunWithClosureArg() {
     expect {
         "func foo(|block: @escaping () -> Void) -> Bool"
         "func foo(b|lock: @escaping () -> Void) -> Bool"
@@ -283,7 +305,7 @@ func testFunWithClosureArg() {
         "func foo(block|: @escaping () -> Void) -> Bool"
     } expandsTo: {
         "func foo(|block|: @escaping () -> Void) -> Bool"
-        "func foo(|block: @escaping () -> Void|) -> Bool".skip()
+        "func foo(|block: @escaping () -> Void|) -> Bool"
         "func foo|(block: @escaping () -> Void)| -> Bool"
     }
     expect {
@@ -333,10 +355,7 @@ func testFunWithClosureArg() {
     } expandsTo: {
         "func foo(block: @escaping () -> Void) -> |Bool|"
     }
-}
 
-@Test
-func testPairs_params() {
     expect {
         "(|a|:b,c:d,e:f)"
         "(a|:|b,c:d,e:f)"
@@ -377,10 +396,7 @@ func testPairs_params() {
     } expandsTo: {
         "(a: b, c: d, |e: f|)"
     }
-}
 
-@Test
-func testPairs_dict() {
     expect {
         "[|a:b,c:d,e:f]"
         "[a|:b,c:d,e:f]"
@@ -444,10 +460,7 @@ func testPairs_dict() {
     } expandsTo: {
         "[a: b, c: d, |e: f|]"
     }
-}
 
-@Test
-func testPairs_generics() {
     expect {
         "<|a|:b,c:d,e:f>"
         "<a:|b|,c:d,e:f>"
@@ -485,10 +498,7 @@ func testPairs_generics() {
     } expandsTo: {
         "<a: b, c: d, |e: f|>"
     }
-}
 
-@Test
-func testNestedGenerics() {
     expect {
         "|Dictionary<String, Array<Int>>".skip()
         "Dict|ionary<String, Array<Int>>"
@@ -540,10 +550,7 @@ func testNestedGenerics() {
         "Dictionary|<String, Array<Int>>|".skip()
         "|Dictionary<String, Array<Int>>|"
     }
-}
 
-@Test
-func testCase() {
     expect {
         "case (_?, nil|): return .orderedAscending"
         "case (_?, |nil|): return .orderedAscending"
@@ -551,10 +558,7 @@ func testCase() {
         "case |(_?, nil)|: return .orderedAscending"
         "|case (_?, nil): return .orderedAscending|"
     }
-}
 
-@Test
-func testAssign() {
     expect {
         "let new.line = |currentLine.expandRegion()".skip()
         "let new.line = current|Line.expandRegion()"
@@ -563,17 +567,14 @@ func testAssign() {
         "let new.line = currentLine|.expandRegion()"
     } expandsTo: {
         "let new.line = |currentLine|.expandRegion()"
-        "let new.line = |currentLine.expandRegion()|".skip()
+        "let new.line = |currentLine.expandRegion()|"
     }
     expect {
         "let ne|w.line = currentLine.expandRegion()"
         "let |new|.line = currentLine.expandRegion()"
         "let |new.line| = currentLine.expandRegion()".skip()
     }
-}
 
-@Test
-func testFunctionType() {
     expect {
         "func foo(f: @escaping (H|ello) -> World) -> Boom"
         "func foo(f: @escaping (|Hello|) -> World) -> Boom"
@@ -582,10 +583,7 @@ func testFunctionType() {
         "func foo(|f: @escaping (Hello) -> World|) -> Boom"
         "func foo|(f: @escaping (Hello) -> World)| -> Boom"
     }
-}
 
-@Test
-func testNames() {
     expect {
         "  var |myVar: String".skip()
         "  var my|Var: String"
@@ -618,10 +616,7 @@ func testNames() {
         "  func myFunc()| async throws -> String"
         "  func |myFunc|() async throws -> String".skip()
     }
-}
 
-@Test
-func testTernary() async throws {
     expect {
         #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop""#.skip()
         #"let emoji = initial|Case.skip ? "bug" : result == expected ? " yep" : " nop""#
@@ -700,14 +695,19 @@ private func expect(
     }
     for initialCase in initialCases {
         print("")
-        let initial = Line(testString: initialCase.string)
-        let expected = Line(testString: firstExpectedString)
+        let initial = Buffer(testString: initialCase.string)
+        let expected = Buffer(testString: firstExpectedString)
         print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
-        let result = initial.expandedRegion()
+        var result = initial
+        result.expandSelections()
         let emoji = initialCase.skip ? "🐛" : result == expected ? " 😃" : " 👿"
         print("\(emoji) \(result.rawDescription)")
         if !initialCase.skip, result != expected {
-            Issue.record("\(result.rawDescription) -- (expected: `\(expected.rawDescription)`)", sourceLocation: initialCase.sourceLocation)
+//            Issue.record("`\(result.rawDescription)` -- (expected: `\(expected.rawDescription)`)", sourceLocation: initialCase.sourceLocation)
+            Issue.record(
+                "Unexpected selection! Initial selection was `\(initial.rawDescription)`, expected selection was \(expected.rawDescription), but got `\(result.rawDescription)`",
+                sourceLocation: initialCase.sourceLocation
+            )
         }
         if initialCase.skip, result == expected {
             Issue.record("🎉 BUG SQUASHED! 🐛 Remove `.skip()`", sourceLocation: initialCase.sourceLocation)
@@ -720,14 +720,19 @@ private func expect(
         defer { previousLineTest = lineTest }
         guard let previousLineTest else { continue }
         print("")
-        let initial = Line(testString: previousLineTest.string)
-        let expected = Line(testString: lineTest.string)
+        let initial = Buffer(testString: previousLineTest.string)
+        let expected = Buffer(testString: lineTest.string)
         print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
-        let result = initial.expandedRegion()
+        var result = initial
+        result.expandSelections()
         let emoji = lineTest.skip ? "🐛" : result == expected ? " 😃" : " 👿"
         print("\(emoji) \(result.rawDescription)")
         if !lineTest.skip, result != expected {
-            Issue.record("\(result.rawDescription) -- (expected: `\(expected.rawDescription)`)", sourceLocation: lineTest.sourceLocation)
+//            Issue.record("`\(result.rawDescription)` -- (expected: `\(expected.rawDescription)`)", sourceLocation: lineTest.sourceLocation)
+            Issue.record(
+                "Unexpected selection! Initial selection was `\(initial.rawDescription)`, expected selection was \(expected.rawDescription), but got `\(result.rawDescription)`",
+                sourceLocation: lineTest.sourceLocation
+            )
         }
         if lineTest.skip, result == expected {
             Issue.record("🎉 BUG SQUASHED! 🐛 Remove `.skip()`", sourceLocation: lineTest.sourceLocation)
