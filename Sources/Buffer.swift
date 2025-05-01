@@ -90,6 +90,12 @@ public struct Buffer: Equatable {
             }
         }
 
+        // 2.1) If inside an array, apply multi-stage array expansion
+        let arrayExpanded = expandInArrayContext(selection)
+        if arrayExpanded.lowerBound != selection.lowerBound || arrayExpanded.upperBound != selection.upperBound {
+            return arrayExpanded
+        }
+
         // 3) Find tokens that overlap with the selection
         let overlappingTokens = tokens.filter { token in
             token.range.overlaps(selection)
@@ -202,14 +208,53 @@ public struct Buffer: Equatable {
     }
     
     private func expandInArrayContext(_ selection: Range<String.Index>) -> Range<String.Index> {
-        // Find the array brackets
-        let brackets = tokens.filter { $0.kind == .bracket && ($0.value == "[" || $0.value == "]") }
-        guard let startBracket = brackets.first(where: { $0.range.lowerBound <= selection.lowerBound }),
-              let endBracket = brackets.last(where: { $0.range.upperBound >= selection.upperBound }) else {
-            return selection
+        // Pair brackets and handle nested arrays with multi-stage expansion
+        let bracketTokens = tokens.filter { $0.kind == .bracket && ($0.value == "[" || $0.value == "]") }
+        var stack: [Token] = []
+        var pairs: [(open: Token, close: Token)] = []
+        for token in bracketTokens {
+            if token.value == "[" {
+                stack.append(token)
+            } else if token.value == "]", let open = stack.popLast() {
+                pairs.append((open: open, close: token))
+            }
         }
-        
-        return startBracket.range.lowerBound..<endBracket.range.upperBound
+        // Find pairs that enclose the selection
+        let enclosingPairs = pairs.filter { pair in
+            pair.open.range.lowerBound <= selection.lowerBound &&
+            pair.close.range.upperBound >= selection.upperBound
+        }
+        guard !enclosingPairs.isEmpty else { return selection }
+        // Sort by the span of the pair (smallest first) to get innermost first
+        let sortedPairs = enclosingPairs.sorted {
+            let spanA = completeBuffer.distance(from: $0.open.range.lowerBound, to: $0.close.range.upperBound)
+            let spanB = completeBuffer.distance(from: $1.open.range.lowerBound, to: $1.close.range.upperBound)
+            return spanA < spanB
+        }
+        // Iterate through pairs for multi-stage expansion
+        for pair in sortedPairs {
+            let openLB = pair.open.range.lowerBound
+            let openUB = pair.open.range.upperBound
+            let closeLB = pair.close.range.lowerBound
+            let closeUB = pair.close.range.upperBound
+            let contentRange = openUB..<closeLB
+            let fullRange = openLB..<closeUB
+            // Stage 1: inside content but not entire content
+            if selection.lowerBound >= openUB && selection.upperBound <= closeLB {
+                if selection == contentRange {
+                    // Stage 2: content fully selected -> include brackets
+                    return fullRange
+                }
+                return contentRange
+            }
+            // Stage 3: if entire pair is already selected, skip to next outer pair
+            if selection == fullRange {
+                continue
+            }
+        }
+        // Fallback to outermost pair full range
+        let outer = sortedPairs.last!
+        return outer.open.range.lowerBound..<outer.close.range.upperBound
     }
     
     private func expandInClosureContext(_ selection: Range<String.Index>) -> Range<String.Index> {
