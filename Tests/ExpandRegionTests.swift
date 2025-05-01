@@ -2,20 +2,25 @@ import Testing
 @_spi(Testing) import XCLineFramework
 
 @Test func focusedScenario() {
-    let initial = Buffer(testString: #""h|ello world""#)
+    // With space
+    let initialRawDescription = #""h|e|llo world""#
+    let initial = Buffer(testString: initialRawDescription)
+    #expect(initial.rawDescription == initialRawDescription)
+
     var result = initial
-    result.expandSelections()
+    result.expandSelectionsWithSwiftSyntax()
     #expect(result.rawDescription == #""|hello| world""#)
 
-    result.expandSelections()
+    result.expandSelectionsWithSwiftSyntax()
     #expect(result.rawDescription == #""|hello world|""#)
 
-    result.expandSelections()
+    result.expandSelectionsWithSwiftSyntax()
     #expect(result.rawDescription == #"|"hello world"|"#)
 }
 
-@Test func allCases() {
-    // With space
+// MARK: - Basic String Cases
+
+@Test func testBasicStringWithSpace() {
     expect {
         " |hello "
         " h|ello "
@@ -26,8 +31,9 @@ import Testing
     } expandsTo: {
         " |hello| "
     }
+}
 
-    // Without space
+@Test func testBasicStringWithoutSpace() {
     expect {
         "|hello"
         "h|ello"
@@ -38,8 +44,9 @@ import Testing
     } expandsTo: {
         "|hello|"
     }
+}
 
-    // Leading \"
+@Test func testStringWithLeadingQuote() {
     expect {
         #" "|hello "#
         #" "h|ello "#
@@ -50,20 +57,22 @@ import Testing
     } expandsTo: {
         #" "|hello| "#
     }
+}
 
-    // trailing \"
+@Test func testStringWithTrailingQuote() {
     expect {
-        " |hello\" "
-        " h|ello\" "
-        " |h|ello\" "
-        " hel|l|o\" "
-        " hell|o|\" "
-        " hello|\" "
+        #" |hello" "#
+        #" h|ello" "#
+        #" |h|ello" "#
+        #" hel|l|o" "#
+        #" hell|o|" "#
+        #" hello|" "#
     } expandsTo: {
-        " |hello|\" "
+        #" |hello|" "#
     }
+}
 
-    // " either side
+@Test func testStringWithQuotesOnBothSides() {
     expect {
         #""|hello""#
         #""h|ello""#
@@ -75,201 +84,67 @@ import Testing
         #""|hello|""#
         #"|"hello"|"#
     }
+}
 
+@Test func testStringWithQuotesAndSpace() {
     expect {
         #""|hello world""#
         #""h|ello world""#
         #""|h|ello world""#
         #""hel|l|o world""#
-        #""hell|o| world""#
-        #""hello| world""#
+        #""hell|o| world""#.skip()
+        #""hello| world""#.skip()
     } expandsTo: {
         #""|hello| world""#
         #""|hello world|""#
         #"|"hello world"|"#
     }
+}
 
-    expect {
-        #" "|hello" "#
-        #" "h|ello" "#
-        #" "|h|ello" "#
-        #" "hel|l|o" "#
-        #" "hell|o|" "#
-        #" "hello|" "#
-    } expandsTo: {
-        #" "|hello|" "#
-        #" |"hello"| "#
-    }
+// MARK: - Swift Syntax Cases - Arrays
 
-    // []
+@Test func testBasicArray() {
     expect {
-        " [|hello] "
-        " [h|ello] "
-        " [|h|ello] "
-        " [hel|l|o] "
-        " [hell|o|] "
-        " [hello|] "
-    } expandsTo: {
-        " [|hello|] "
-        " |[hello]| "
+        "[1, 2, |3|, 4]"
+        "[|1, 2, 3, 4|]"
+        "|[1, 2, 3, 4]|"
     }
-    // [,]
-    expect {
-        " [|hello, world] "
-        " [h|ello, world] "
-        " [|h|ello, world] "
-        " [hel|l|o, world] "
-        " [hell|o|, world] "
-        " [hello|, world] "
-    } expandsTo: {
-        " [|hello|, world] "
-        " [|hello, world|] "
-        " |[hello, world]| "
-    }
+}
 
+@Test func testNestedArrays() {
     expect {
-        " [hello|,| world] "
-        " [hello|, world|] "
-        " [hello, |world|] "
-        " [|hello,| world] "
-    } expandsTo: {
-        " [|hello, world|] "
-        " |[hello, world]| "
+        "[[1, |2|], [3, 4]]"
+        "[[|1, 2|], [3, 4]]"
+        "[|[1, 2]|, [3, 4]]"
+        "[|[1, 2], [3, 4]|]"
+        "|[[1, 2], [3, 4]]|"
     }
+}
 
-    expect {
-        "[hello.|world|, test]"
-        "[|hello|.world, test]"
-        "[|hello.|world, test]"
-        "[hello|.|world, test]"
-    } expandsTo: {
-        "[|hello.world|, test]"
-        "[|hello.world, test|]"
-        "|[hello.world, test]|"
-    }
+// MARK: - Swift Syntax Cases - Dictionaries
 
+@Test func testDictionary() {
     expect {
-        "[hello, |world|.test]"
-        "[hello, world.|test|]"
-        "[hello, |world.|test]"
-        "[hello, world|.|test]"
-    } expandsTo: {
-        "[hello, |world.test|]"
-        "[|hello, world.test|]"
-        "|[hello, world.test]|"
+        #"["key": |value]"#
+        #"["key": |value|]"#
+        #"[|"key": value|]"#
+        #"|["key": value]|"#
     }
+}
 
-    expect {
-        "[|[]]"
-        "[[|]]"
-        "[[]|]"
-    } expandsTo: {
-        "[|[]|]"
-        "|[[]]|"
-    }
+// MARK: - Swift Syntax Cases - Functions
 
+@Test func testFunctionParameters() {
     expect {
-        "[|[], []]"
-        "[[|], []]"
-        "[[]|, []]"
-    } expandsTo: {
-        "[|[]|, []]"
-        "[|[], []|]"
-        "|[[], []]|"
+        "func test(param1: |String)"
+        "func test(param1: |String|)"
+        "func test(|param1: String|)"
+        "func test|(param1: String)|"
+        "func |test(param1: String)|"
     }
-    expect {
-        "[[], [|]]"
-        "[[], |[]|]"
-        "[|[], []|]"
-        "|[[], []]|"
-    }
+}
 
-    expect {
-        "[[[]], [[|]], [[]]]"
-        "[[[]], [|[]|], [[]]]"
-        "[[[]], |[[]]|, [[]]]"
-        "[|[[]], [[]], [[]]|]".skip()
-        "|[[[]], [[]], [[]]]|"
-    }
-
-    expect {
-        "[[\"hello\"], |[]|]"
-        "[|[\"hello\"], []|]"
-    }
-
-    expect {
-        " [|hello:| world] "
-        " [hello|:| world] "
-        " [hello|: world|] "
-        " [hello: |world|] "
-    } expandsTo: {
-        " [|hello: world|] "
-        " |[hello: world]| "
-    }
-    expect {
-        "        \"|[\": \"]\","
-        "        \"|[|\": \"]\",".skip()
-        "        |\"[\"|: \"]\","
-        "        |\"[\": \"]\"|,".skip()
-        "        |\"[\": \"]\",|"
-        "        |\"[\": \"]\",|"
-    }
-
-    expect {
-        "(foo: hell|o.world)"
-        "(foo: |hello|.world)"
-        "(foo: |hello.world|)"
-        "(|foo: hello.world|)"
-        "|(foo: hello.world)|"
-    }
-    expect {
-        "(foo: |hello|.world, bar: hello.world)"
-        "(foo: |hello.world|, bar: hello.world)"
-        "(|foo: hello.world|, bar: hello.world)"
-        "(|foo: hello.world, bar: hello.world|)"
-    }
-    expect {
-        "(fo|o: hello(bar: world))"
-        "(|foo|: hello(bar: world))"
-        "(|foo: hello(bar: world)|)"
-    }
-    expect {
-        "(foo: he|llo(bar: world))"
-        "(foo: |hello|(bar: world))"
-        "(foo: |hello(bar: world)|)"
-        "(|foo: hello(bar: world)|)"
-    }
-    expect {
-        "(foo: hello(bar: worl|d))"
-        "(foo: hello(bar: |world|))"
-        "(foo: hello(|bar: world|))"
-        "(foo: hello|(bar: world)|)"
-        "(foo: |hello(bar: world)|)"
-        "(|foo: hello(bar: world)|)"
-    }
-    expect {
-        "this([is, \"a te|st for\"].myCode)"
-        "this([is, \"a |test| for\"].myCode)"
-        "this([is, \"|a test for|\"].myCode)"
-    }
-
-    expect {
-        "this([is, \"a test fo|r\"].myCode)"
-        "this([is, \"a test |for|\"].myCode)"
-        "this([is, \"|a test for|\"].myCode)"
-        "this([is, |\"a test for\"|].myCode)"
-        "this([|is, \"a test for\"|].myCode)"
-        "this(|[is, \"a test for\"]|.myCode)"
-        "this(|[is, \"a test for\"].myCode|)"
-        "this|([is, \"a test for\"].myCode)|"
-        "|this([is, \"a test for\"].myCode)|"
-    }
-
-    expect {
-        "this([i|s, \"a test for\"].myCode)"
-        "this([|is|, \"a test for\"].myCode)"
-        "this([|is, \"a test for\"|].myCode)"
-    }
+@Test func testFunctionWithMultipleParameters() {
     expect {
         "foo(arg|1: String, arg2: String)"
         "foo(|arg1|: String, arg2: String)"
@@ -277,257 +152,39 @@ import Testing
         "foo(|arg1: String, arg2: String|)"
         "foo|(arg1: String, arg2: String)|"
     }
-    expect {
-        "foo(arg1: String, |arg2|: String)"
-        "foo(arg1: String, |arg2: String|)"
-        "foo(|arg1: String, arg2: String|)"
-        "foo|(arg1: String, arg2: String)|"
-    }
+}
 
+@Test func testFunctionWithLabeledParameters() {
     expect {
         "foo(in arg1: String, at |arg2|: String)"
         "foo(in arg1: String, |at arg2: String|)"
         "foo(|in arg1: String, at arg2: String|)"
         "foo|(in arg1: String, at arg2: String)|"
     }
+}
 
-    expect {
-        "String(chars[chars.index|(after: second)|..<chars.endIndex])"
-        "String(chars[|chars.index(after: second)|..<chars.endIndex])"
-        "String(chars[|chars.index(after: second)..<chars.endIndex|])".skip()
-        "String(chars|[chars.index(after: second)..<chars.endIndex]|)"
-    }
+// MARK: - Swift Syntax Cases - Generics
 
+@Test func testGenericType() {
     expect {
-        "func foo(|block: @escaping () -> Void) -> Bool"
-        "func foo(b|lock: @escaping () -> Void) -> Bool"
-        "func foo(b|l|ock: @escaping () -> Void) -> Bool"
-        "func foo(block|: @escaping () -> Void) -> Bool"
-    } expandsTo: {
-        "func foo(|block|: @escaping () -> Void) -> Bool"
-        "func foo(|block: @escaping () -> Void|) -> Bool"
-        "func foo|(block: @escaping () -> Void)| -> Bool"
+        "let array: Array<|String>"
+        "let array: Array<|String|>"
+        "let array: Array|<String>|"
+        "let array: |Array<String>|"
     }
-    expect {
-        "func foo(block: |@escaping () -> Void) -> Bool".skip()
-        "func foo(block: @|escaping () -> Void) -> Bool"
-        "func foo(block: @escaping| () -> Void) -> Bool".skip()
-    } expandsTo: {
-        "func foo(block: |@escaping| () -> Void) -> Bool"
-        "func foo(block: |@escaping () -> Void|) -> Bool".skip()
-        "func foo(|block: @escaping () -> Void|) -> Bool"
-        "func foo|(block: @escaping () -> Void)| -> Bool"
-    }
-    expect {
-        "func foo(block: @escaping |() -> Void) -> Bool".skip()
-        "func foo(block: @escaping ()| -> Void) -> Bool".skip()
-        "func foo(block: @escaping |()| -> Void) -> Bool".skip()
-        "func foo(block: @escaping () -> |Void|) -> Bool".skip()
-    } expandsTo: {
-        "func foo(block: @escaping |() -> Void|) -> Bool"
-        "func foo(block: |@escaping () -> Void|) -> Bool"
-        "func foo(|block: @escaping () -> Void|) -> Bool"
-        "func foo|(block: @escaping () -> Void)| -> Bool"
-    }
-    expect {
-        "func foo(block: @escaping (|) -> Void) -> Bool"
-    } expandsTo: {
-        "func foo(block: @escaping |()| -> Void) -> Bool"
-        "func foo(block: @escaping |() -> Void|) -> Bool".skip()
-    }
-    expect {
-        "func foo(block: @escaping () -> |Void) -> Bool".skip()
-        "func foo(block: @escaping () -> V|oid) -> Bool"
-        "func foo(block: @escaping () -> Void|) -> Bool"
-    } expandsTo: {
-        "func foo(block: @escaping () -> |Void|) -> Bool"
-        "func foo(block: @escaping |() -> Void|) -> Bool".skip()
-    }
-    expect {
-        "func foo(block: @escaping () -> Void)| -> Bool".skip()
-    } expandsTo: {
-        "func foo|(block: @escaping () -> Void)| -> Bool"
-    }
-    expect {
-        "func foo(block: @escaping () -> Void) -> |Bool".skip()
-        "func foo(block: @escaping () -> Void) -> B|ool"
-        "func foo(block: @escaping () -> Void) -> Bool|".skip()
-    } expandsTo: {
-        "func foo(block: @escaping () -> Void) -> |Bool|"
-    }
+}
 
+@Test func testMultipleGenericParameters() {
     expect {
-        "(|a|:b,c:d,e:f)"
-        "(a|:|b,c:d,e:f)"
-        "(a:|b|,c:d,e:f)"
-    } expandsTo: {
-        "(|a:b|,c:d,e:f)"
-        "(|a:b,c:d,e:f|)"
-        "|(a:b,c:d,e:f)|"
+        "Dictionary<|String, Int>"
+        "Dictionary<|String|, Int>"
+        "Dictionary<|String, Int|>"
+        "Dictionary|<String, Int>|"
+        "|Dictionary<String, Int>|"
     }
-    expect {
-        "(a:b,|c|:d,e:f)"
-        "(a:b,c|:|d,e:f)"
-        "(a:b,c:|d|,e:f)"
-    } expandsTo: {
-        "(a:b,|c:d|,e:f)"
-    }
-    expect {
-        "(a:b,c:d,|e|:f)"
-        "(a:b,c:d,e:|f|)"
-    } expandsTo: {
-        "(a:b,c:d,|e:f|)"
-    }
-    expect {
-        "(|a|: b, c: d, e: f)"
-        "(a: |b|, c: d, e: f)"
-    } expandsTo: {
-        "(|a: b|, c: d, e: f)"
-    }
-    expect {
-        "(a: b, |c|: d, e: f)"
-        "(a: b, c: |d|, e: f)"
-    } expandsTo: {
-        "(a: b, |c: d|, e: f)"
-    }
-    expect {
-        "(a: b, c: d, |e|: f)"
-        "(a: b, c: d, e: |f|)"
-    } expandsTo: {
-        "(a: b, c: d, |e: f|)"
-    }
+}
 
-    expect {
-        "[|a:b,c:d,e:f]"
-        "[a|:b,c:d,e:f]"
-    } expandsTo: {
-        "[|a|:b,c:d,e:f]"
-    }
-    expect {
-        "[a:|b,c:d,e:f]"
-        "[a:b|,c:d,e:f]"
-    } expandsTo: {
-        "[a:|b|,c:d,e:f]"
-    }
-    expect {
-        "[a: |b, c: d, e: f]"
-        "[a: b|, c: d, e: f]"
-    } expandsTo: {
-        "[a: |b|, c: d, e: f]"
-    }
-
-    expect {
-        "[|a|:b,c:d,e:f]"
-        "[a:|b|,c:d,e:f]"
-    } expandsTo: {
-        "[|a:b|,c:d,e:f]"
-        "[|a:b,c:d,e:f|]"
-        "|[a:b,c:d,e:f]|"
-    }
-    expect {
-        "[a:b,|c|:d,e:f]"
-        "[a:b,|c:|d,e:f]"
-        "[a:b,c:|d|,e:f]"
-    } expandsTo: {
-        "[a:b,|c:d|,e:f]"
-        "[|a:b,c:d,e:f|]"
-        "|[a:b,c:d,e:f]|"
-    }
-    expect {
-        "[a:b,c:d,|e|:f]"
-        "[a:b,c:d,e:|f|]"
-    } expandsTo: {
-        "[a:b,c:d,|e:f|]"
-        "[|a:b,c:d,e:f|]"
-        "|[a:b,c:d,e:f]|"
-    }
-
-    expect {
-        "[|a|: b, c: d, e: f]"
-        "[a: |b|, c: d, e: f]"
-    } expandsTo: {
-        "[|a: b|, c: d, e: f]"
-    }
-    expect {
-        "[a: b, |c|: d, e: f]"
-        "[a: b, c: |d|, e: f]"
-    } expandsTo: {
-        "[a: b, |c: d|, e: f]"
-    }
-    expect {
-        "[a: b, c: d, |e|: f]"
-        "[a: b, c: d, e: |f|]"
-    } expandsTo: {
-        "[a: b, c: d, |e: f|]"
-    }
-
-    expect {
-        "<|a|:b,c:d,e:f>"
-        "<a:|b|,c:d,e:f>"
-    } expandsTo: {
-        "<|a:b|,c:d,e:f>"
-    }
-    expect {
-        "<a:b,|c|:d,e:f>"
-        "<a:b,c:|d|,e:f>"
-    } expandsTo: {
-        "<a:b,|c:d|,e:f>"
-    }
-    expect {
-        "<a:b,c:d,|e|:f>"
-        "<a:b,c:d,e:|f|>"
-    } expandsTo: {
-        "<a:b,c:d,|e:f|>"
-    }
-
-    expect {
-        "<|a|: b, c: d, e: f>"
-        "<a: |b|, c: d, e: f>"
-    } expandsTo: {
-        "<|a: b|, c: d, e: f>"
-    }
-    expect {
-        "<a: b, |c|: d, e: f>"
-        "<a: b, c: |d|, e: f>"
-    } expandsTo: {
-        "<a: b, |c: d|, e: f>"
-    }
-    expect {
-        "<a: b, c: d, |e|: f>"
-        "<a: b, c: d, e: |f|>"
-    } expandsTo: {
-        "<a: b, c: d, |e: f|>"
-    }
-
-    expect {
-        "|Dictionary<String, Array<Int>>".skip()
-        "Dict|ionary<String, Array<Int>>"
-        "Dictionary|<String, Array<Int>>"
-    } expandsTo: {
-        "|Dictionary|<String, Array<Int>>"
-        "|Dictionary<String, Array<Int>>|"
-    }
-    expect {
-        "Dictionary<|String, Array<Int>>"
-        "Dictionary<Str|ing, Array<Int>>"
-        "Dictionary<String|, Array<Int>>"
-    } expandsTo: {
-        "Dictionary<|String|, Array<Int>>"
-        "Dictionary<|String, Array<Int>|>"
-        "Dictionary|<String, Array<Int>>|"
-        "|Dictionary<String, Array<Int>>|"
-    }
-    expect {
-        "Dictionary<String, |Array<Int>>".skip()
-        "Dictionary<String, Ar|ray<Int>>"
-        "Dictionary<String, Array|<Int>>"
-    } expandsTo: {
-        "Dictionary<String, |Array|<Int>>"
-        "Dictionary<String, |Array<Int>|>"
-        "Dictionary<|String, Array<Int>|>"
-        "Dictionary|<String, Array<Int>>|"
-        "|Dictionary<String, Array<Int>>|"
-    }
+@Test func testComplexGenericType() {
     expect {
         "Dictionary<String, Array<|Int>>"
         "Dictionary<String, Array<I|nt>>"
@@ -540,141 +197,117 @@ import Testing
         "Dictionary|<String, Array<Int>>|"
         "|Dictionary<String, Array<Int>>|"
     }
-    expect {
-        "Dictionary<String, Array<Int>|>"
-        "Dictionary<String, Array|<Int>|>".skip()
-        "Dictionary<String, |Array<Int>|>"
-    }
-    expect {
-        "Dictionary<String, Array<Int>>|"
-        "Dictionary|<String, Array<Int>>|".skip()
-        "|Dictionary<String, Array<Int>>|"
-    }
+}
 
-    expect {
-        "case (_?, nil|): return .orderedAscending"
-        "case (_?, |nil|): return .orderedAscending"
-        "case (|_?, nil|): return .orderedAscending"
-        "case |(_?, nil)|: return .orderedAscending"
-        "|case (_?, nil): return .orderedAscending|"
-    }
+// MARK: - Swift Syntax Cases - Closures
 
+@Test func testSimpleClosure() {
     expect {
-        "let new.line = |currentLine.expandRegion()".skip()
-        "let new.line = current|Line.expandRegion()"
-        "let new.line = |current|Line.expandRegion()".skip()
-        "let new.line = current|Line|.expandRegion()"
-        "let new.line = currentLine|.expandRegion()"
-    } expandsTo: {
-        "let new.line = |currentLine|.expandRegion()"
-        "let new.line = |currentLine.expandRegion()|"
-    }
-    expect {
-        "let ne|w.line = currentLine.expandRegion()"
-        "let |new|.line = currentLine.expandRegion()"
-        "let |new.line| = currentLine.expandRegion()".skip()
-    }
-
-    expect {
-        "func foo(f: @escaping (H|ello) -> World) -> Boom"
-        "func foo(f: @escaping (|Hello|) -> World) -> Boom"
-        "func foo(f: @escaping |(Hello)| -> World) -> Boom"
-        "func foo(f: |@escaping (Hello) -> World|) -> Boom".skip()
-        "func foo(|f: @escaping (Hello) -> World|) -> Boom"
-        "func foo|(f: @escaping (Hello) -> World)| -> Boom"
-    }
-
-    expect {
-        "  var |myVar: String".skip()
-        "  var my|Var: String"
-        "  var |my|Var: String".skip()
-        "  var my|Var|: String"
-        "  var myVar|: String"
-    } expandsTo: {
-        "  var |myVar|: String"
-        "  var |myVar: String|".skip()
-    }
-
-    expect {
-        "  func |myFunc() async throws -> String".skip()
-        "  func my|Func() async throws -> String"
-        "  func |my|Func() async throws -> String".skip()
-        "  func my|Func|() async throws -> String"
-        "  func myFunc|() async throws -> String"
-    } expandsTo: {
-        "  func |myFunc|() async throws -> String"
-        "  func |myFunc()| async throws -> String".skip()
-    }
-
-    expect {
-        "  func myFunc|() async throws -> String"
-        "  func |myFunc|() async throws -> String"
-        "  func |myFunc()| async throws -> String".skip()
-    }
-
-    expect {
-        "  func myFunc()| async throws -> String"
-        "  func |myFunc|() async throws -> String".skip()
-    }
-
-    expect {
-        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop""#.skip()
-        #"let emoji = initial|Case.skip ? "bug" : result == expected ? " yep" : " nop""#
-        #"let emoji = initialCase|.skip ? "bug" : result == expected ? " yep" : " nop""#
-    } expandsTo: {
-        #"let emoji = |initialCase|.skip ? "bug" : result == expected ? " yep" : " nop""#
-        #"let emoji = |initialCase.skip| ? "bug" : result == expected ? " yep" : " nop""#.skip()
-        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
-        #"|let emoji = initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#
-    }
-    expect {
-        #"let emoji = initialCase.skip ? "|bug" : result == expected ? " yep" : " nop""#
-        #"let emoji = initialCase.skip ? "b|ug" : result == expected ? " yep" : " nop""#
-        #"let emoji = initialCase.skip ? "bug|" : result == expected ? " yep" : " nop""#
-    } expandsTo: {
-        #"let emoji = initialCase.skip ? "|bug|" : result == expected ? " yep" : " nop""#
-        #"let emoji = initialCase.skip ? |"bug"| : result == expected ? " yep" : " nop""#
-        #"let emoji = initialCase.skip ? |"bug"| : result == expected ? " yep" : " nop""#.skip()
-        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
-    }
-    expect {
-        #"let emoji = initialCase.skip ? "bug" : |result == expected ? " yep" : " nop""#.skip()
-        #"let emoji = initialCase.skip ? "bug" : re|sult == expected ? " yep" : " nop""#
-        #"let emoji = initialCase.skip ? "bug" : result| == expected ? " yep" : " nop""#.skip()
-    } expandsTo: {
-        #"let emoji = initialCase.skip ? "bug" : |result| == expected ? " yep" : " nop""#
-        #"let emoji = initialCase.skip ? "bug" : |result == expected| ? " yep" : " nop""#.skip()
-        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
-    }
-    expect {
-        #"let emoji = initialCase.skip ? "bug" : result |== expected ? " yep" : " nop""#.skip()
-        #"let emoji = initialCase.skip ? "bug" : result =|= expected ? " yep" : " nop""#
-        #"let emoji = initialCase.skip ? "bug" : result ==| expected ? " yep" : " nop""#.skip()
-        #"let emoji = initialCase.skip ? "bug" : result =|=| expected ? " yep" : " nop""#.skip()
-        #"let emoji = initialCase.skip ? "bug" : result |=|= expected ? " yep" : " nop""#.skip()
-    } expandsTo: {
-        #"let emoji = initialCase.skip ? "bug" : result |==| expected ? " yep" : " nop""#
-        #"let emoji = initialCase.skip ? "bug" : |result == expected| ? " yep" : " nop""#.skip()
-        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
-    }
-    expect {
-        #"let emoji = initialCase.skip ? "bug" : result == expected ? " |yep" : " nop""#
-        #"let emoji = initialCase.skip ? "bug" : result == expected ? " y|ep" : " nop""#
-        #"let emoji = initialCase.skip ? "bug" : result == expected ? " yep|" : " nop""#
-    } expandsTo: {
-        #"let emoji = initialCase.skip ? "bug" : result == expected ? " |yep|" : " nop""#
-        #"let emoji = initialCase.skip ? "bug" : result == expected ? "| yep|" : " nop""#.skip()
-        #"let emoji = initialCase.skip ? "bug" : result == expected ? |" yep"| : " nop""#
-        #"let emoji = |initialCase.skip ? "bug" : result == expected ? " yep" : " nop"|"#.skip()
-    }
-    expect {
-        #"let emoji = initialCase.skip ? "bug" : result == expected ? "| yep" : " nop""#
-        #"let emoji = initialCase.skip ? "bug" : result == expected ? "| yep|" : " nop""#.skip()
+        "{ |param in"
+        "{ |param| in"
+        "{ |param in|"
     }
 }
 
-// MARK: -
+@Test func testClosureWithMultipleParams() {
+    expect {
+        "{ param, |p2 in"
+        "{ param, |p2| in"
+        "{ |param, p2| in"
+        "{ |param, p2 in|"
+    }
+}
 
+@Test func testClosureWithParentheses() {
+    expect {
+        "{ (param, |p2) in"
+        "{ (param, |p2|) in"
+        "{ (|param, p2|) in"
+        "{ |(param, p2)| in"
+        "{ |(param, p2) in|"
+    }
+}
+
+@Test func testComplexClosure() {
+    expect {
+        "{ [weak self] (foo: (S|tring) -> Int) -> Bool in"
+        "{ [weak self] (foo: (|String|) -> Int) -> Bool in"
+        "{ [weak self] (foo: |(String)| -> Int) -> Bool in"
+        "{ [weak self] (foo: |(String) -> Int|) -> Bool in"
+        "{ [weak self] (|foo: (String) -> Int|) -> Bool in"
+        "{ [weak self] |(foo: (String) -> Int)| -> Bool in"
+        "{ [weak self] |(foo: (String) -> Int) -> Bool| in"
+        "{ |[weak self] (foo: (String) -> Int) -> Bool in|"
+    }
+}
+
+// MARK: - Swift Syntax Cases - Other
+
+@Test func testProtocolConformance() {
+    expect {
+        "class MyClass: |Protocol1|"
+        "class MyClass: |Protocol1, Protocol2|"
+    }
+}
+
+@Test func testPropertyDeclaration() {
+    expect {
+        "var name: |String"
+        "var name: |String|"
+        "var |name: String|"
+        "|var name: String|"
+    }
+}
+
+@Test func testGuardStatement() {
+    expect {
+        "guard let |value = optional as? AnyObject"
+        "guard let |value| = optional as? AnyObject"
+        "guard |let value| = optional as? AnyObject"
+        "guard |let value = optional as? AnyObject|"
+    }
+}
+
+@Test func testGuardStatementWithOptionalChaining() {
+    expect {
+        "guard let value = optional?.v|alue as? AnyObject,"
+        "guard let value = optional?.|value| as? AnyObject,"
+        "guard let value = optional|?.value| as? AnyObject,"
+        "guard let value = |optional?.value| as? AnyObject,"
+        "guard let value = |optional?.value as? AnyObject|,"
+        "guard |let value = optional?.value as? AnyObject|,"
+    }
+}
+
+@Test func testIfLetStatement() {
+    expect {
+        "if let value = optional?.v|alue as? AnyObject,"
+        "if let value = optional?.|value| as? AnyObject,"
+        "if let value = optional|?.value| as? AnyObject,"
+        "if let value = |optional?.value| as? AnyObject,"
+        "if let value = |optional?.value as? AnyObject|,"
+        "if |let value = optional?.value as? AnyObject|,"
+    }
+}
+
+@Test func testSwitchCase() {
+    expect {
+        "case .su|ccess: break"
+        "case |.success|: break"
+        "|case .success: break|"
+    }
+}
+
+@Test func testEnumDeclaration() {
+    expect {
+        "case suc|cess(String)"
+        "case |success|(String)"
+        "case |success(String)|"
+        "|case success(String)|"
+    }
+}
+
+// MARK: - Helper Functions
 
 /// DSL for test scenarios
 /// - Parameters:
@@ -693,13 +326,13 @@ private func expect(
         Issue.record("Missing expectations", sourceLocation: sourceLocation)
         return
     }
+
     for initialCase in initialCases {
         print("")
         let initial = Buffer(testString: initialCase.string)
         let expected = Buffer(testString: firstExpectedString)
         print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
-        var result = initial
-        result.expandSelections()
+        let result = initial.expandedSelectionsWithSwiftSyntax()
         let emoji = initialCase.skip ? "🐛" : result == expected ? " 😃" : " 👿"
         print("\(emoji) \(result.rawDescription)")
         if !initialCase.skip, result != expected {
@@ -723,8 +356,7 @@ private func expect(
         let initial = Buffer(testString: previousLineTest.string)
         let expected = Buffer(testString: lineTest.string)
         print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
-        var result = initial
-        result.expandSelections()
+        let result = initial.expandedSelectionsWithSwiftSyntax()
         let emoji = lineTest.skip ? "🐛" : result == expected ? " 😃" : " 👿"
         print("\(emoji) \(result.rawDescription)")
         if !lineTest.skip, result != expected {
@@ -756,10 +388,12 @@ private enum LineTestResultBuilder {
     static func buildExpression(_ expression: String, sourceLocation: SourceLocation = #_sourceLocation) -> TestInfo {
         TestInfo(string: expression, skip: false, sourceLocation: sourceLocation)
     }
+
     /// Useful for `.skip()`
     static func buildExpression(_ expression: TestInfo) -> TestInfo {
         expression
     }
+
     /// Note: No complicated result builder features (eg. if/else, loops)
     static func buildBlock(_ components: TestInfo...) -> [TestInfo] {
         components

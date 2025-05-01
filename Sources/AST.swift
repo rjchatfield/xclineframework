@@ -8,15 +8,15 @@
 import SourceKittenFramework
 
 extension Buffer {
-    public mutating func expandSelections() {
-        selections = expandedSelections()
+    public mutating func expandSelections_SOURCEKITTEN() {
+        selections = expandedSelections_SOURCEKITTEN()
     }
 
-    public func expandedSelections() -> [SourceTextRange] {
-        selections.map(expandedSelection(range:))
+    public func expandedSelections_SOURCEKITTEN() -> [SourceTextRange] {
+        selections.map(expandedSelection_SOURCEKITTEN(range:))
     }
 
-    private func expandedSelection(range: SourceTextRange) -> SourceTextRange {
+    private func expandedSelection_SOURCEKITTEN(range: SourceTextRange) -> SourceTextRange {
         print("🔍 Starting expansion for range: line \(range.start.line):\(range.start.column) to line \(range.end.line):\(range.end.column)")
         
         // Get the AST from SourceKitten
@@ -28,8 +28,8 @@ extension Buffer {
         print("🔍 Successfully got AST structure")
 
         // Convert our SourceTextRange to byte range for SourceKitten
-        let startOffset = byteOffset(for: range.start)
-        let endOffset = byteOffset(for: range.end)
+        let startOffset = byteOffset_SOURCEKITTEN(for: range.start)
+        let endOffset = byteOffset_SOURCEKITTEN(for: range.end)
         let currentLength = endOffset - startOffset
         print("🔍 Converted to byte offsets - start: \(startOffset), end: \(endOffset), length: \(currentLength)")
 
@@ -199,15 +199,15 @@ extension Buffer {
         let leadingWS = nodeText.prefix(while: { $0.isWhitespace }).utf8.count
         let trailingWS = String(nodeText.reversed().prefix(while: { $0.isWhitespace })).utf8.count
 
-        let trimmedStart = sourcePosition(forByteOffset: Int(nodeOffset) + leadingWS)
-        let trimmedEnd = sourcePosition(forByteOffset: Int(nodeOffset + nodeLength) - trailingWS)
+        let trimmedStart = sourcePosition_SOURCEKITTEN(forByteOffset: Int(nodeOffset) + leadingWS)
+        let trimmedEnd = sourcePosition_SOURCEKITTEN(forByteOffset: Int(nodeOffset + nodeLength) - trailingWS)
         
         print("🔍 Expanded to new range: line \(trimmedStart.line):\(trimmedStart.column) to line \(trimmedEnd.line):\(trimmedEnd.column)")
         return SourceTextRange(start: trimmedStart, end: trimmedEnd)
     }
 
     // Helper to convert SourceTextPosition to byte offset
-    private func byteOffset(for position: SourceTextPosition) -> Int {
+    private func byteOffset_SOURCEKITTEN(for position: SourceTextPosition) -> Int {
         // This is a simplified implementation - you'll need to properly handle
         // UTF-8 encoding and actual line endings in your buffer
         let lines = completeBuffer.split(separator: "\n")
@@ -231,7 +231,7 @@ extension Buffer {
     }
 
     // Helper to convert byte offset to SourceTextPosition
-    private func sourcePosition(forByteOffset offset: Int) -> SourceTextPosition {
+    private func sourcePosition_SOURCEKITTEN(forByteOffset offset: Int) -> SourceTextPosition {
         // This is a simplified implementation - you'll need to properly handle
         // UTF-8 encoding and actual line endings in your buffer
         let lines = completeBuffer.split(separator: "\n")
@@ -262,59 +262,5 @@ extension Buffer {
         }
 
         return SourceTextPosition(line: currentLine, column: column)
-    }
-}
-
-public struct Buffer: Equatable {
-    public let completeBuffer: String
-    public var selections: [SourceTextRange]
-
-    public init(completeBuffer: String, selections: [SourceTextRange]) {
-        self.completeBuffer = completeBuffer
-        self.selections = selections
-    }
-
-    private typealias Raw = (before: Substring, selected: Substring, after: Substring)
-
-    @_spi(Testing)
-    public init(testString: String) {
-        let raw = makeRaw(testString)!
-        self.init(
-            completeBuffer: String(raw.before + raw.selected + raw.after),
-            selections: [
-                SourceTextRange(
-                    start: SourceTextPosition(line: 0, column: raw.before.count),
-                    end: SourceTextPosition(line: 0, column: raw.before.count + raw.selected.count)
-                )
-            ]
-        )
-    }
-
-    @_spi(Testing)
-    public var rawDescription: String {
-        let start = selections[0].start.column
-        let end = selections[0].end.column
-        let raw: Raw = completeBuffer.partition(start: start, end: end)
-        return "\(raw.before)|\(raw.selected)|\(raw.after)"
-    }
-}
-
-public struct SourceTextRange: Equatable {
-    public let start: SourceTextPosition
-    public let end: SourceTextPosition
-
-    public init(start: SourceTextPosition, end: SourceTextPosition) {
-        self.start = start
-        self.end = end
-    }
-}
-
-public struct SourceTextPosition: Equatable {
-    public var line: Int
-    public var column: Int
-
-    public init(line: Int, column: Int) {
-        self.line = line
-        self.column = column
     }
 }
