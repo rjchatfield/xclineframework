@@ -4,316 +4,398 @@ import Testing
 // MARK: - Basic String Cases
 
 @Test func testBasicStringWithSpace() {
-    expect {
-        " |hello "
-        " h|ello "
-        " |h|ello "
-        " hel|l|o "
-        " hell|o| "
-        " hello| "
-    } expandsTo: {
-        " |hello| "
-    }
+    expect(
+        eachInitialCase: {
+            " |hello " // I'm at the start of a word, I should select the word
+            " h|ello " // I'm in the middle of a word, I should select the word
+            " |h|ello " // I'm at the start of a word, I should select the word
+            " hel|l|o " // I'm in the middle of a word, I should select the word
+            " hell|o| " // I'm at the end of a word, I should select the word
+            " hello| " // I'm at the end of a word, I should select the word
+        },
+        expandsTo: {
+            " |hello| " // I have selected the entire word
+        }
+    )
 }
 
 @Test func testBasicStringWithoutSpace() {
-    expect {
-        "|hello"
-        "h|ello"
-        "|h|ello"
-        "hel|l|o"
-        "hell|o|"
-        "hello|"
-    } expandsTo: {
-        "|hello|"
-    }
+    expect(
+        eachInitialCase: {
+            "|hello" // I'm at the start of a word, I should select the word
+            "h|ello" // I'm in the middle of a word, I should select the word
+            "|h|ello" // I'm at the start of a word, I should select the word
+            "hel|l|o" // I'm in the middle of a word, I should select the word
+            "hell|o|" // I'm at the end of a word, I should select the word
+            "hello|" // I'm at the end of a word, I should select the word
+        },
+        expandsTo: {
+            "|hello|" // I have selected the entire word
+        }
+    )
 }
 
 @Test func testStringWithLeadingQuote() {
-    expect {
-        #" "|hello "#
-        #" "h|ello "#
-        #" "|h|ello "#
-        #" "hel|l|o "#
-        #" "hell|o| "#
-        #" "hello| "#
-    } expandsTo: {
-        #" "|hello| "#
-    }
+    expect(
+        eachInitialCase: {
+            #" "|hello "# // I'm at the start of a word, I should select the word
+            #" "h|ello "# // I'm in the middle of a word, I should select the word
+            #" "|h|ello "# // I'm at the start of a word, I should select the word
+            #" "hel|l|o "# // I'm in the middle of a word, I should select the word
+            #" "hell|o| "# // I'm at the end of a word, I should select the word
+            #" "hello| "# // I'm at the end of a word, I should select the word
+        },
+        expandsTo: {
+            #" "|hello| "# // I have selected the entire word
+        }
+    )
 }
 
 @Test func testStringWithTrailingQuote() {
-    expect {
-        #" |hello" "#
-        #" h|ello" "#
-        #" |h|ello" "#
-        #" hel|l|o" "#
-        #" hell|o|" "#
-        #" hello|" "#
-    } expandsTo: {
-        #" |hello|" "#
-    }
+    expect(
+        eachInitialCase: {
+            #" |hello" "# // I'm at the start of a word, I should select the word
+            #" h|ello" "# // I'm in the middle of a word, I should select the word
+            #" |h|ello" "# // I'm at the start of a word, I should select the word
+            #" hel|l|o" "# // I'm in the middle of a word, I should select the word
+            #" hell|o|" "# // I'm at the end of a word, I should select the word
+            #" hello|" "# // I'm at the end of a word, I should select the word
+        },
+        expandsTo: {
+            #" |hello|" "# // I have selected the entire word
+        }
+    )
 }
 
 @Test func testStringWithQuotesOnBothSides() {
-    expect {
-        #""|hello""#
-        #""h|ello""#
-        #""|h|ello""#
-        #""hel|l|o""#
-        #""hell|o|""#
-        #""hello|""#
-    } expandsTo: {
-        #""|hello|""#
-        #"|"hello"|"#
-    }
+    expect(
+        eachInitialCase: {
+            #""|hello""# // I'm at the start of a word, I should select the word
+            #""h|ello""# // I'm in the middle of a word, I should select the word
+            #""|h|ello""# // I'm at the start of a word, I should select the word
+            #""hel|l|o""# // I'm in the middle of a word, I should select the word
+            #""hell|o|""# // I'm at the end of a word, I should select the word
+            #""hello|""# // I'm at the end of a word, I should select the word
+        },
+        expandsTo: {
+            #""|hello|""# // I am at the edges of a string, I should select the quotes too
+        },
+        thenExpandsStepByStepTo: {
+            #"|"hello"|"# // I have selected the string and it's quotes
+        }
+    )
 }
 
 @Test func testStringWithQuotesAndSpace() {
-    expect {
-        #""|hello world""#
-        #""h|ello world""#
-        #""|h|ello world""#
-        #""hel|l|o world""#
-        #""hell|o| world""#
-        #""hello| world""#
-    } expandsTo: {
-        #""|hello| world""#
-        #""|hello world|""#
-        #"|"hello world"|"#
-    }
+    expect(
+        eachInitialCase: {
+            #""|hello world""# // I'm at the start of a word, I should select the word
+            #""h|ello world""# // I'm in the middle of a word, I should select the word
+            #""|h|ello world""# // I'm at the start of a word, I should select the word
+            #""hel|l|o world""# // I'm in the middle of a word, I should select the word
+            #""hell|o| world""# // I'm at the end of a word, I should select the word
+            #""hello| world""# // I'm at the end of a word, I should select the word
+        },
+        expandsTo: {
+            #""|hello| world""# // I have selected the entire word. I am in a string, so I should select everything within the quotes
+        },
+        thenExpandsStepByStepTo: {
+            #""|hello world|""# // I am at the edges of a string, I should select the quotes too
+            #"|"hello world"|"# // I have selected the string and it's quotes
+        }
+    )
 }
 
 // MARK: - Swift Syntax Cases - Arrays
 
 @Test func testBasicArray() {
-    expect {
-        "[1, 2, |3|, 4]"
-        "[|1, 2, 3, 4|]"
-        "|[1, 2, 3, 4]|"
-    }
+    expect(
+        eachInitialCase: {
+            "[1, 2, |3, 4]"
+            "[1, 2, 3|, 4]"
+        },
+        expandsTo: {
+            "[1, 2, |3|, 4]"
+        },
+        thenExpandsStepByStepTo: {
+            "[|1, 2, 3, 4|]"
+            "|[1, 2, 3, 4]|"
+        }
+    )
 }
 
 @Test func testNestedArrays() {
-    expect {
-        "[[1, |2|], [3, 4]]"
-        "[[|1, 2|], [3, 4]]"
-        "[|[1, 2]|, [3, 4]]"
-        "[|[1, 2], [3, 4]|]"
-        "|[[1, 2], [3, 4]]|"
-    }
+    expect(
+        expandsStepByStep: {
+            "[[1, |2|], [3, 4]]"
+            "[[|1, 2|], [3, 4]]"
+            "[|[1, 2]|, [3, 4]]"
+            "[|[1, 2], [3, 4]|]"
+            "|[[1, 2], [3, 4]]|"
+        }
+    )
 }
 
 // MARK: - Swift Syntax Cases - Dictionaries
 
 @Test func testDictionary() {
-    expect {
-        #"["key": |value]"#
-        #"["key": |value|]"#
-        #"[|"key": value|]"#
-        #"|["key": value]|"#
-    }
+    expect(
+        expandsStepByStep: {
+            #"["key": |value]"#
+            #"["key": |value|]"#
+            #"[|"key": value|]"#
+            #"|["key": value]|"#
+        }
+    )
 }
 
 // MARK: - Swift Syntax Cases - Functions
 
 @Test func testFunctionParameters() {
-    expect {
-        "func test(param1: |String)"
-        "func test(param1: |String|)"
-        "func test(|param1: String|)"
-        "func test|(param1: String)|"
-        "func |test(param1: String)|".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "func test(param1: |String)"
+            "func test(param1: |String|)"
+            "func test(|param1: String|)"
+            "func test|(param1: String)|"
+            "func |test(param1: String)|".notYetSupported()
+        }
+    )
 }
 
 @Test func testFunctionWithMultipleParameters() {
-    expect {
-        "foo(arg|1: String, arg2: String)"
-        "foo(|arg1|: String, arg2: String)"
-        "foo(|arg1: String|, arg2: String)"
-        "foo(|arg1: String, arg2: String|)"
-        "foo|(arg1: String, arg2: String)|"
-    }
+    expect(
+        expandsStepByStep: {
+            "foo(arg|1: String, arg2: String)"
+            "foo(|arg1|: String, arg2: String)"
+            "foo(|arg1: String|, arg2: String)"
+            "foo(|arg1: String, arg2: String|)"
+            "foo|(arg1: String, arg2: String)|"
+        }
+    )
 }
 
 @Test func testFunctionWithLabeledParameters() {
-    expect {
-        "foo(in arg1: String, at |arg2|: String)"
-        "foo(in arg1: String, |at arg2: String|)"
-        "foo(|in arg1: String, at arg2: String|)"
-        "foo|(in arg1: String, at arg2: String)|"
-    }
+    expect(
+        expandsStepByStep: {
+            "foo(in arg1: String, at |arg2|: String)"
+            "foo(in arg1: String, |at arg2: String|)"
+            "foo(|in arg1: String, at arg2: String|)"
+            "foo|(in arg1: String, at arg2: String)|"
+        }
+    )
 }
 
 // MARK: - Swift Syntax Cases - Generics
 
 @Test func testGenericType() {
-    expect {
-        "let array: Array<|String>"
-        "let array: Array<|String|>"
-        "let array: Array|<String>|"
-        "let array: |Array<String>|".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "let array: Array<|String>"
+            "let array: Array<|String|>"
+            "let array: Array|<String>|"
+            "let array: |Array<String>|".notYetSupported()
+        }
+    )
 }
 
 @Test func testMultipleGenericParameters() {
-    expect {
-        "Dictionary<|String, Int>"
-        "Dictionary<|String|, Int>"
-        "Dictionary<|String, Int|>"
-        "Dictionary|<String, Int>|"
-        "|Dictionary<String, Int>|"
-    }
+    expect(
+        expandsStepByStep: {
+            "Dictionary<|String, Int>"
+            "Dictionary<|String|, Int>"
+            "Dictionary<|String, Int|>"
+            "Dictionary|<String, Int>|"
+            "|Dictionary<String, Int>|"
+        }
+    )
 }
 
 @Test func testComplexGenericType() {
-    expect {
-        "Dictionary<String, Array<|Int>>"
-        "Dictionary<String, Array<I|nt>>"
-        "Dictionary<String, Array<Int|>>"
-    } expandsTo: {
-        "Dictionary<String, Array<|Int|>>"
-        "Dictionary<String, Array|<Int>|>"
-        "Dictionary<String, |Array<Int>|>"
-        "Dictionary<|String, Array<Int>|>"
-        "Dictionary|<String, Array<Int>>|"
-        "|Dictionary<String, Array<Int>>|"
-    }
+    expect(
+        eachInitialCase: {
+            "Dictionary<String, Array<|Int>>"
+            "Dictionary<String, Array<I|nt>>"
+            "Dictionary<String, Array<Int|>>"
+        },
+        expandsTo: {
+            "Dictionary<String, Array<|Int|>>"
+        },
+        thenExpandsStepByStepTo: {
+            "Dictionary<String, Array|<Int>|>"
+            "Dictionary<String, |Array<Int>|>"
+            "Dictionary<|String, Array<Int>|>"
+            "Dictionary|<String, Array<Int>>|"
+            "|Dictionary<String, Array<Int>>|"
+        }
+    )
 }
 
 // MARK: - Swift Syntax Cases - Closures
 
 @Test func testSimpleClosure() {
-    expect {
-        "{ |param in"
-        "{ |param| in"
-        "{ |param in|".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "{ |param in"
+            "{ |param| in"
+            "{ |param in|".notYetSupported()
+        }
+    )
 }
 
 @Test func testClosureWithMultipleParams() {
-    expect {
-        "{ param, |p2 in"
-        "{ param, |p2| in"
-        "{ |param, p2| in".notYetSupported()
-        "{ |param, p2 in|".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "{ param, |p2 in"
+            "{ param, |p2| in"
+            "{ |param, p2| in".notYetSupported()
+            "{ |param, p2 in|".notYetSupported()
+        }
+    )
 }
 
 @Test func testClosureWithParentheses() {
-    expect {
-        "{ (param, |p2) in"
-        "{ (param, |p2|) in"
-        "{ (|param, p2|) in"
-        "{ |(param, p2)| in"
-        "{ |(param, p2) in|".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "{ (param, |p2) in"
+            "{ (param, |p2|) in"
+            "{ (|param, p2|) in"
+            "{ |(param, p2)| in"
+            "{ |(param, p2) in|".notYetSupported()
+        }
+    )
 }
 
 @Test func testComplexClosure() {
-    expect {
-        "{ [weak self] (foo: (S|tring) -> Int) -> Bool in"
-        "{ [weak self] (foo: (|String|) -> Int) -> Bool in"
-        "{ [weak self] (foo: |(String)| -> Int) -> Bool in"
-        "{ [weak self] (foo: |(String) -> Int|) -> Bool in".notYetSupported()
-        "{ [weak self] (|foo: (String) -> Int|) -> Bool in"
-        "{ [weak self] |(foo: (String) -> Int)| -> Bool in"
-        "{ [weak self] |(foo: (String) -> Int) -> Bool| in".notYetSupported()
-        "{ |[weak self] (foo: (String) -> Int) -> Bool in|".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "{ [weak self] (foo: (S|tring) -> Int) -> Bool in"
+            "{ [weak self] (foo: (|String|) -> Int) -> Bool in"
+            "{ [weak self] (foo: |(String)| -> Int) -> Bool in"
+            "{ [weak self] (foo: |(String) -> Int|) -> Bool in".notYetSupported()
+            "{ [weak self] (|foo: (String) -> Int|) -> Bool in"
+            "{ [weak self] |(foo: (String) -> Int)| -> Bool in"
+            "{ [weak self] |(foo: (String) -> Int) -> Bool| in".notYetSupported()
+            "{ |[weak self] (foo: (String) -> Int) -> Bool in|".notYetSupported()
+        }
+    )
 }
 
 // MARK: - Swift Syntax Cases - Other
 
 @Test func testProtocolConformance() {
-    expect {
-        "class MyClass: |Protocol1|"
-        "class MyClass: |Protocol1, Protocol2|".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "class MyClass: |Protocol1|"
+            "class MyClass: |Protocol1, Protocol2|".notYetSupported()
+        }
+    )
 }
 
 @Test func testPropertyDeclaration() {
-    expect {
-        "var name: |String"
-        "var name: |String|"
-        "var |name: String|".notYetSupported()
-        "|var name: String|"
-    }
+    expect(
+        expandsStepByStep: {
+            "var name: |String"
+            "var name: |String|"
+            "var |name: String|".notYetSupported()
+            "|var name: String|"
+        }
+    )
 }
 
 @Test func testGuardStatement() {
-    expect {
-        "guard let |value = optional as? AnyObject"
-        "guard let |value| = optional as? AnyObject"
-        "guard |let value| = optional as? AnyObject".notYetSupported()
-        "guard |let value = optional as? AnyObject|".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "guard let |value = optional as? AnyObject"
+            "guard let |value| = optional as? AnyObject"
+            "guard |let value| = optional as? AnyObject".notYetSupported()
+            "guard |let value = optional as? AnyObject|".notYetSupported()
+        }
+    )
 }
 
 @Test func testGuardStatementWithOptionalChaining() {
-    expect {
-        "guard let value = optional?.v|alue as? AnyObject,"
-        "guard let value = optional?.|value| as? AnyObject,"
-        "guard let value = optional|?.value| as? AnyObject,".notYetSupported()
-        "guard let value = |optional?.value| as? AnyObject,".notYetSupported()
-        "guard let value = |optional?.value as? AnyObject|,".notYetSupported()
-        "guard |let value = optional?.value as? AnyObject|,".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "guard let value = optional?.v|alue as? AnyObject,"
+            "guard let value = optional?.|value| as? AnyObject,"
+            "guard let value = optional|?.value| as? AnyObject,".notYetSupported()
+            "guard let value = |optional?.value| as? AnyObject,".notYetSupported()
+            "guard let value = |optional?.value as? AnyObject|,".notYetSupported()
+            "guard |let value = optional?.value as? AnyObject|,".notYetSupported()
+        }
+    )
 }
 
 @Test func testIfLetStatement() {
-    expect {
-        "if let value = optional?.v|alue as? AnyObject,"
-        "if let value = optional?.|value| as? AnyObject,"
-        "if let value = optional|?.value| as? AnyObject,".notYetSupported()
-        "if let value = |optional?.value| as? AnyObject,".notYetSupported()
-        "if let value = |optional?.value as? AnyObject|,".notYetSupported()
-        "if |let value = optional?.value as? AnyObject|,".notYetSupported()
-    }
+    expect(
+        expandsStepByStep: {
+            "if let value = optional?.v|alue as? AnyObject,"
+            "if let value = optional?.|value| as? AnyObject,"
+            "if let value = optional|?.value| as? AnyObject,".notYetSupported()
+            "if let value = |optional?.value| as? AnyObject,".notYetSupported()
+            "if let value = |optional?.value as? AnyObject|,".notYetSupported()
+            "if |let value = optional?.value as? AnyObject|,".notYetSupported()
+        }
+    )
 }
 
 @Test func testSwitchCase() {
-    expect {
-        "case .su|ccess: break"
-        "case |.success|: break".notYetSupported()
-        "|case .success: break|"
-    }
+    expect(
+        expandsStepByStep: {
+            "case .su|ccess: break"
+            "case |.success|: break".notYetSupported()
+            "|case .success: break|"
+        }
+    )
 }
 
 @Test func testEnumDeclaration() {
-    expect {
-        "case suc|cess(String)"
-        "case |success|(String)"
-        "case |success(String)|".notYetSupported()
-        "|case success(String)|"
-    }
+    expect(
+        expandsStepByStep: {
+            "case suc|cess(String)"
+            "case |success|(String)"
+            "case |success(String)|".notYetSupported()
+            "|case success(String)|"
+        }
+    )
 }
 
 // MARK: - Helper Functions
 
-/// DSL for test scenarios
-/// - Parameters:
-///   - initialCases: All of these strings should expand to the first string in `expandsTo:`. Failures will show up inline.
-///   - expectations: All of these strings should expand one after another. Failures will show up inline.
 private func expect(
-    @LineTestResultBuilder initialCases: () -> [TestInfo] = { [] },
-    @LineTestResultBuilder expandsTo expectations: () -> [TestInfo],
+    @LineTestResultBuilder expandsStepByStep expectations: () -> [TestInfo],
     sourceLocation: SourceLocation = #_sourceLocation
 ) {
-    let expectations = expectations()
-    let initialCases = initialCases()
-
-    // Test all initial cases
-    guard let firstExpectedString = expectations.first?.string else {
+    var expectations = expectations()
+    guard !expectations.isEmpty else {
         Issue.record("Missing expectations", sourceLocation: sourceLocation)
         return
     }
+    let firstExpectation = expectations.removeFirst()
+    expect(
+        eachInitialCase: {},
+        expandsTo: { firstExpectation },
+        thenExpandsStepByStepTo: { expectations },
+        sourceLocation: sourceLocation
+    )
+}
 
+private func expect(
+    @LineTestResultBuilder eachInitialCase initialCases: () -> [TestInfo],
+    @LineTestResultBuilder expandsTo expectation1: () -> TestInfo,
+    @LineTestResultBuilder thenExpandsStepByStepTo expectations2: () -> [TestInfo] = { [] },
+    sourceLocation: SourceLocation = #_sourceLocation
+) {
+    let initialCases = initialCases()
+    let initialExpandsTo = expectation1()
+    let thenExpandsStepByStep = expectations2()
+
+    // Test all initial cases
     for initialCase in initialCases {
         print("")
         let initial = Buffer(testString: initialCase.string)
-        let expected = Buffer(testString: firstExpectedString)
+        let expected = Buffer(testString: initialExpandsTo.string)
         print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
         var mutableInitial = initial
         let result = mutableInitial.expandedSelection()
@@ -331,10 +413,9 @@ private func expect(
     }
 
     // Test all remaining cases
-    var previousLineTest: TestInfo?
-    for lineTest in expectations {
+    var previousLineTest: TestInfo = initialExpandsTo
+    for lineTest in thenExpandsStepByStep {
         defer { previousLineTest = lineTest }
-        guard let previousLineTest else { continue }
         print("")
         let initial = Buffer(testString: previousLineTest.string)
         let expected = Buffer(testString: lineTest.string)
@@ -377,8 +458,22 @@ private enum LineTestResultBuilder {
         expression
     }
 
+    /// Useful for returning array in helper (ie. `thenExpandsStepByStepTo: { expectations }`)
+    static func buildExpression(_ expression: [TestInfo]) -> [TestInfo] {
+        expression
+    }
+
+    /// Useful for returning single not array (it. `expandsTo: () -> TestInfo`)
+    static func buildBlock(_ component: TestInfo) -> TestInfo {
+        component
+    }
+
     /// Note: No complicated result builder features (eg. if/else, loops)
     static func buildBlock(_ components: TestInfo...) -> [TestInfo] {
+        components
+    }
+
+    static func buildBlock(_ components: [TestInfo]) -> [TestInfo] {
         components
     }
 }
