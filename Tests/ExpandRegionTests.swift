@@ -599,7 +599,6 @@ private func expect(
         print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
         var mutableInitial = initial
         let result = mutableInitial.expandedSelection()
-        let emoji = initialCase.skip ? "🐛" : result == expected ? " 😃" : " 👿"
         if !initialCase.skip, result != expected {
             Issue.record(
                 "Unexpected selection! Initial selection was `\(initial.rawDescription)`, expected selection was \(expected.rawDescription), but got `\(result.rawDescription)`",
@@ -621,7 +620,6 @@ private func expect(
         print(" 🤔\(initial.rawDescription) -> \(expected.rawDescription)")
         var mutableInitial = initial
         let result = mutableInitial.expandedSelection()
-        let emoji = lineTest.skip ? "🐛" : result == expected ? " 😃" : " 👿"
         if !lineTest.skip, result != expected {
             Issue.record(
                 "Unexpected selection! Initial selection was `\(initial.rawDescription)`, expected selection was \(expected.rawDescription), but got `\(result.rawDescription)`",
