@@ -456,11 +456,11 @@ import Testing
 @Test func testChainingFromEnd() {
     expect(
         expandsStepByStep: {
-            " value.optional.va|lue " // I'm at the start of a word, I should select the word
-            " value.optional.|value| " // I have selected the name of the ivar, I should select the `.` too
-            " value.optional|.value| " // I have selected the name of the dot and ivar, I should select instance variable too
-            " value.|optional.value| " // I have selected the name of the ivar and it's dot chaining, I should select the `.` too
-            " value|.optional.value| " // I have selected the name of the dot and ivar, I should select instance variable too
+            " value.optional.va|lue " // I'm in the middle of a word, I should select the word
+            " value.optional.|value| " // I have selected the property at the end of the chain, I should select the `.` before it too
+            " value.optional|.value| " // I have selected the dot and propterty at the end of the chain, I should select property before it too up to the `.`
+            " value.|optional.value| " // I have selected the properties at the end of the chain, I should select the `.` before it too.
+            " value|.optional.value| " // I have selected the dot and all the properties to the end of the chain, I should select instance variable too
             " |value.optional.value| " // I have selected the whole expression
         }
     )
@@ -469,11 +469,11 @@ import Testing
 @Test func testChainingOptionalsFromEnd() {
     expect(
         expandsStepByStep: {
-            " value?.optional?.va|lue " // I'm at the start of a word, I should select the word
-            " value?.optional?.|value| " // I have selected the name of the ivar, I should select the `?.` too
-            " value?.optional|?.value| " // I have selected the name of the dot and ivar, I should select instance variable too
-            " value?.|optional?.value| " // I have selected the name of the ivar and it's dot chaining, I should select the `?.` too
-            " value|?.optional?.value| " // I have selected the name of the dot and ivar, I should select instance variable too
+            " value?.optional?.va|lue " // I'm in the middle of a word, I should select the word
+            " value?.optional?.|value| " // I have selected the property at the end of the chain, I should select the `?.` before it too.
+            " value?.optional|?.value| " // I have selected the dot and propterty at the end of the chain, I should select property before it too up to the `?.`
+            " value?.|optional?.value| " // I have selected the properties at the end of the chain, I should select the `?.` before it too.
+            " value|?.optional?.value| " // I have selected the dot and all the properties to the end of the chain, I should select instance variable too
             " |value?.optional?.value| " // I have selected the whole expression
         }
     )

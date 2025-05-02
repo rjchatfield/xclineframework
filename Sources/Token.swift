@@ -5,13 +5,14 @@ public struct Token: Equatable {
     /// The type of token
     public enum Kind: Equatable {
         case word
-        case whitespace
+        case number
         case quote
         case bracket
         case comma
         case colon
         case dot
-        case arrow
+        case optionalDot
+        case whitespace
         case other
     }
     

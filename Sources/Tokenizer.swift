@@ -16,6 +16,20 @@ public struct Tokenizer {
         
         while index < text.endIndex {
             let char = text[index]
+            let remaining = text[index...]
+
+            // Check for optional chaining "?."
+            if remaining.starts(with: "?.") {
+                let start = index
+                let end = text.index(index, offsetBy: 2)
+                tokens.append(Token(
+                    kind: .optionalDot,
+                    value: "?.",
+                    range: start..<end
+                ))
+                index = end
+                continue
+            }
             
             // Skip whitespace
             if char.isWhitespace {
@@ -98,16 +112,30 @@ public struct Tokenizer {
             let start = index
             while index < text.endIndex {
                 let char = text[index]
-                if char.isWhitespace || ",:.[]{}()<>\"".contains(char) {
+                if char.isWhitespace || ",:.[]{}()<>\"?".contains(char) {
                     break
                 }
                 index = text.index(after: index)
             }
-            tokens.append(Token(
-                kind: .word,
-                value: String(text[start..<index]),
-                range: start..<index
-            ))
+            // Handle '?' separately if it wasn't part of '?.'
+            if text[start] == "?" && start == index { // It's just a single '?' character
+                 index = text.index(after: start)
+                 tokens.append(Token(
+                     kind: .other, // Or a specific 'questionMark' kind if needed elsewhere
+                     value: "?",
+                     range: start..<index
+                 ))
+                 continue
+            }
+            
+            // Only add word token if range is valid
+            if start < index {
+                tokens.append(Token(
+                    kind: .word,
+                    value: String(text[start..<index]),
+                    range: start..<index
+                ))
+            }
         }
         
         return tokens

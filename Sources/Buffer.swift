@@ -76,77 +76,113 @@ public struct Buffer: Equatable {
     // MARK: - Private Expansion Logic
     
     private func expand(selection: Range<String.Index>) -> Range<String.Index> {
+        let initialDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: selection, buffer: completeBuffer)]).rawDescription
+        print("[expand] Input: \(initialDesc)")
         // --- Stage 0: Cursor Expansion ---
         if selection.lowerBound == selection.upperBound {
-            // Find the word associated with the cursor using root context logic
-            // expandInRootContext handles finding the appropriate word or returning selection
-            return expandInRootContext(selection)
+            let result = expandInRootContext(selection)
+            let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: result, buffer: completeBuffer)]).rawDescription
+            print("[expand] Stage 0 (Cursor) -> \(resultDesc)")
+            return result
         }
 
         // --- Stage 1: Partial Word Expansion ---
-        // Check if the current selection is strictly contained within a single word token
         if let containingWord = tokens.first(where: { $0.kind == .word &&
                                                  $0.range.lowerBound <= selection.lowerBound &&
                                                  $0.range.upperBound >= selection.upperBound }) {
-             // If the selection is smaller than the containing word, expand to the word boundaries
              if selection != containingWord.range {
+                let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: containingWord.range, buffer: completeBuffer)]).rawDescription
+                print("[expand] Stage 1 (Partial Word) -> \(resultDesc)")
                  return containingWord.range // Expand partial word -> full word
              }
-             // If selection IS the full word, proceed to context expansion below
+        }
+        
+        // --- Stage 1.5: Chain Expansion ---
+        let chainExpansion = expandChainBackward(selection)
+        if chainExpansion != selection {
+            let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: chainExpansion, buffer: completeBuffer)]).rawDescription
+            print("[expand] Stage 1.5 (Chain) -> \(resultDesc)")
+            return chainExpansion // Return if chain expansion occurred
         }
 
         // --- Stage 2: Context-Specific Expansion (String, Array, etc.) ---
-        // Now that we handle partial->full word expansion first, we can check contexts.
-
+        var contextResult: Range<String.Index>? = nil
         // String Context Check
         let quoteTokens = tokens.filter { $0.kind == .quote }
         if let startQuote = quoteTokens.first, let endQuote = quoteTokens.last {
-            let fullStringRangeIncludingQuotes = startQuote.range.lowerBound..<endQuote.range.upperBound
-            // Check if the *current* selection is within the string bounds (content or quotes)
             if selection.lowerBound >= startQuote.range.lowerBound && selection.upperBound <= endQuote.range.upperBound {
-                 // Delegate to string context logic, which now handles word->content->quotes
                  let stringExpansion = expandInStringContext(selection)
-                 // Only return if it actually expanded
-                 if stringExpansion != selection { return stringExpansion }
-                 // If string logic didn't expand (e.g., already at max), fall through
+                 if stringExpansion != selection { 
+                    print("[expand] Stage 2 (String Context)")
+                    contextResult = stringExpansion
+                 }
             }
         }
-
-        // Array Context Check
-        let arrayExpansion = expandInArrayContext(selection)
-        if arrayExpansion != selection { return arrayExpansion }
-
-        // Function Context Check (Assuming expandInFunctionContext returns selection if no expansion)
-        let functionExpansion = expandInFunctionContext(selection)
-        if functionExpansion != selection { return functionExpansion }
-
-        // Closure Context Check
-        let closureExpansion = expandInClosureContext(selection)
-        if closureExpansion != selection { return closureExpansion }
-
-        // Generic Context Check
-        let genericExpansion = expandInGenericContext(selection)
-        if genericExpansion != selection { return genericExpansion }
+        // Array Context Check (Only if no context found yet)
+        if contextResult == nil {
+             let arrayExpansion = expandInArrayContext(selection)
+             if arrayExpansion != selection { 
+                  print("[expand] Stage 2 (Array Context)")
+                  contextResult = arrayExpansion
+             }
+        }
+        // Function Context Check (Only if no context found yet)
+        if contextResult == nil {
+             let functionExpansion = expandInFunctionContext(selection)
+             if functionExpansion != selection { 
+                  print("[expand] Stage 2 (Function Context)")
+                  contextResult = functionExpansion
+             }
+        }
+        // Closure Context Check (Only if no context found yet)
+         if contextResult == nil {
+              let closureExpansion = expandInClosureContext(selection)
+              if closureExpansion != selection { 
+                   print("[expand] Stage 2 (Closure Context)")
+                   contextResult = closureExpansion
+              }
+         }
+         // Generic Context Check (Only if no context found yet)
+         if contextResult == nil {
+              let genericExpansion = expandInGenericContext(selection)
+              if genericExpansion != selection { 
+                   print("[expand] Stage 2 (Generic Context)")
+                   contextResult = genericExpansion
+              }
+         }
+        // Return if context expansion happened
+        if let contextResult = contextResult {
+             let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: contextResult, buffer: completeBuffer)]).rawDescription
+             print("[expand] Stage 2 -> \(resultDesc)")
+             return contextResult
+        }
 
         // --- Stage 2.5: Base Type Expansion ---
-        // If the selection is exactly a full generic definition (e.g., <String, Int>), 
-        // try expanding to include the base type (e.g., Dictionary<String, Int>)
         if let baseTypeExpansion = expandBaseTypeIfGenericSelected(selection) {
+             let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: baseTypeExpansion, buffer: completeBuffer)]).rawDescription
+             print("[expand] Stage 2.5 (Base Type) -> \(resultDesc)")
              return baseTypeExpansion
         }
 
         // --- Stage 3: Fallback Root Context Expansion ---
-        // If no specific context applied or expanded, try root logic again.
-        // This might handle cases like selecting across different token types not in a specific context.
         let rootExpansion = expandInRootContext(selection)
-        if rootExpansion != selection { return rootExpansion }
+        if rootExpansion != selection { 
+             let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: rootExpansion, buffer: completeBuffer)]).rawDescription
+             print("[expand] Stage 3 (Root Fallback) -> \(resultDesc)")
+             return rootExpansion
+        }
 
-        // Final fallback: nearest token if absolutely nothing else expanded
-        // Avoid calling findNearestToken if rootExpansion already returned selection
+        // Final fallback: nearest token
         if rootExpansion == selection {
-             return findNearestToken(for: selection)
+             let nearest = findNearestToken(for: selection)
+             if nearest != selection {
+                  let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: nearest, buffer: completeBuffer)]).rawDescription
+                  print("[expand] Stage 4 (Nearest Token) -> \(resultDesc)")
+             }
+             return nearest == selection ? selection : nearest
         } else {
-             return rootExpansion // Should be selection if no expansion happened in root context
+             // Should not be reached if rootExpansion != selection check above is correct
+             return rootExpansion
         }
     }
     
@@ -190,23 +226,6 @@ public struct Buffer: Equatable {
         }
         
         return .root
-    }
-    
-    private func expandInContext(_ context: TokenContext, selection: Range<String.Index>) -> Range<String.Index> {
-        switch context {
-        case .string:
-            return expandInStringContext(selection)
-        case .function:
-            return expandInFunctionContext(selection)
-        case .array:
-            return expandInArrayContext(selection)
-        case .closure:
-            return expandInClosureContext(selection)
-        case .generic:
-            return expandInGenericContext(selection)
-        default:
-            return expandInRootContext(selection)
-        }
     }
     
     private func expandInStringContext(_ selection: Range<String.Index>) -> Range<String.Index> {
@@ -444,90 +463,59 @@ public struct Buffer: Equatable {
     }
     
     private func expandInRootContext(_ selection: Range<String.Index>) -> Range<String.Index> {
+        let initialDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: selection, buffer: completeBuffer)]).rawDescription
+        print("[rootCtx] Input: \(initialDesc)")
         // --- Cursor Expansion ---
         if selection.lowerBound == selection.upperBound {
-            // Find word containing or immediately following cursor
             if let wordToken = tokens.first(where: { $0.kind == .word && ($0.range.contains(selection.lowerBound) || $0.range.upperBound == selection.lowerBound || $0.range.lowerBound == selection.lowerBound) }) {
-                 // Added lowerBound check for cursor at start of word
+                 print("[rootCtx] Cursor -> Word ('\(wordToken.value)')")
                  return wordToken.range
             }
-            // If cursor not in/near word, maybe expand to adjacent non-whitespace token?
-            // For now, let later logic handle it or return selection.
+             print("[rootCtx] Cursor -> No Change")
              return selection // Return cursor if no word found nearby
         }
 
         // --- Range Expansion ---
-        // If selection is a range:
 
-        // Priority 1: Fully Contained Word
-        // Find the smallest word token that *fully contains* the selection.
-        if let containingWord = tokens.filter({ $0.kind == .word && $0.range.lowerBound <= selection.lowerBound && $0.range.upperBound >= selection.upperBound }).min(by: { completeBuffer.distance(from: $0.range.lowerBound, to: $0.range.upperBound) < completeBuffer.distance(from: $1.range.lowerBound, to: $1.range.upperBound) }) {
-             // Expand selection to the bounds of the word it's inside
-             // Note: The main `expand` function already handles partial->full word expansion in Stage 1.
-             // This check might be redundant here or could handle edge cases.
-             // Let's keep it simple: If it's contained, we probably want the word itself.
-             return containingWord.range
+        // Priority 1: Selection within a single Word -> Expand to full word
+        if let containingWord = tokens.first(where: { $0.kind == .word &&
+                                                 $0.range.lowerBound <= selection.lowerBound &&
+                                                 $0.range.upperBound >= selection.upperBound }) {
+             if selection != containingWord.range {
+                print("[rootCtx] Prio 1 (Inside Word) -> Full Word ('\(containingWord.value)')")
+                 return containingWord.range
+             }
         }
 
-        // Priority 2: Overlapping Words
-        // Find word tokens that overlap the selection.
+        // Priority 2: Overlapping Multiple Words -> Union
         let overlappingWords = tokens.filter { token in
             token.kind == .word && token.range.overlaps(selection)
         }
-
-        // If selection overlaps exactly one word, expand to that word's bounds.
-        if overlappingWords.count == 1 {
-             // Check if the selection is *smaller* than the word - if so, Stage 1 in `expand` handles it.
-             // If selection >= word range, maybe expand outwards?
-             // Let's return the word range for simplicity if it overlaps just one.
-            return overlappingWords[0].range
-        }
-        // If selection overlaps multiple words, expand to union of those words?
         if overlappingWords.count > 1 {
              if let firstWord = overlappingWords.min(by: { $0.range.lowerBound < $1.range.lowerBound }),
                 let lastWord = overlappingWords.max(by: { $0.range.upperBound < $1.range.upperBound }) {
-                 return firstWord.range.lowerBound..<lastWord.range.upperBound
-             }
-        }
-
-
-        // Priority 3: Adjacent Word (if selection is in whitespace/non-word)
-        // Find the nearest word to the right
-        if let nextWord = tokens.first(where: { token in
-            token.kind == .word && token.range.lowerBound >= selection.upperBound
-        }) {
-            // Check distance? Only expand if adjacent?
-            if let precedingToken = tokens.last(where: { $0.range.upperBound <= selection.lowerBound }), precedingToken.range.upperBound == selection.lowerBound {
-                 // Selection might start right after a token. Check what's between selection end and next word.
-                 let gap = completeBuffer[selection.upperBound..<nextWord.range.lowerBound]
-                 if gap.allSatisfy({ $0.isWhitespace }) {
-                      // Expand selection in whitespace to the next word
-                      // return nextWord.range // Option 1: Just the word
-                      return selection.lowerBound..<nextWord.range.upperBound // Option 2: Include whitespace + word
-                 }
-            } else if selection.upperBound == nextWord.range.lowerBound { // Directly adjacent
-                  return selection.lowerBound..<nextWord.range.upperBound // Include word
-            }
-             // If not clearly adjacent whitespace, don't expand yet.
-        }
-
-        // Find the nearest word to the left
-         if let prevWord = tokens.reversed().first(where: { token in
-             token.kind == .word && token.range.upperBound <= selection.lowerBound
-         }) {
-             if let followingToken = tokens.first(where: { $0.range.lowerBound >= selection.upperBound }), followingToken.range.lowerBound == selection.upperBound {
-                  let gap = completeBuffer[prevWord.range.upperBound..<selection.lowerBound]
-                  if gap.allSatisfy({ $0.isWhitespace }) {
-                       // return prevWord.range // Option 1
-                       return prevWord.range.lowerBound..<selection.upperBound // Option 2: Include word + whitespace
+                  let unionRange = firstWord.range.lowerBound..<lastWord.range.upperBound
+                  if selection != unionRange {
+                      print("[rootCtx] Prio 2 (Overlap Words) -> Union ('\(completeBuffer[unionRange])')")
+                      return unionRange
                   }
-             } else if selection.lowerBound == prevWord.range.upperBound { // Directly adjacent
-                  return prevWord.range.lowerBound..<selection.upperBound // Include word
              }
-              // If not clearly adjacent whitespace, don't expand yet.
-         }
+        }
 
-        // Fallback: return selection if no expansion rule applied in root context
+        // Priority 3: Adjacent Word Expansion (Whitespace selection)
+        let selectionText = completeBuffer[selection]
+        if selectionText.allSatisfy({ $0.isWhitespace }) {
+            if let nextWord = tokens.first(where: { $0.kind == .word && $0.range.lowerBound == selection.upperBound }) {
+                 print("[rootCtx] Prio 3 (Whitespace) -> Include Next Word ('\(nextWord.value)')")
+                 return selection.lowerBound..<nextWord.range.upperBound
+            }
+            if let prevWord = tokens.last(where: { $0.kind == .word && $0.range.upperBound == selection.lowerBound }) {
+                 print("[rootCtx] Prio 3 (Whitespace) -> Include Prev Word ('\(prevWord.value)')")
+                 return prevWord.range.lowerBound..<selection.upperBound
+            }
+        }
+        print("[rootCtx] Fallback -> No Change")
+        // Fallback: No root expansion rule applied
         return selection
     }
 
@@ -704,6 +692,68 @@ public struct Buffer: Equatable {
     private func tokens(in range: Range<String.Index>) -> [Token] {
          tokens.filter { range.overlaps($0.range) }
     }
+
+    // NEW HELPER FUNCTION for chain expansion logic
+    private func expandChainBackward(_ selection: Range<String.Index>) -> Range<String.Index> {
+        let initialDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: selection, buffer: completeBuffer)]).rawDescription
+        print("[chainBwd] Input: \(initialDesc)")
+        // --- Step 1 (Logic A): Handle selection of a word -> Expand back to include preceding dot/? ---
+        if let selectedWordToken = tokens.first(where: { $0.kind == .word && $0.range == selection }),
+           let wordIndex = tokens.firstIndex(of: selectedWordToken), wordIndex > 0 {
+            let precedingToken = tokens[wordIndex - 1]
+            if precedingToken.kind == .dot || precedingToken.kind == .optionalDot {
+                 let gap = completeBuffer[precedingToken.range.upperBound..<selection.lowerBound]
+                 if gap.isEmpty || gap.allSatisfy({ $0.isWhitespace }) {
+                      let result = precedingToken.range.lowerBound..<selection.upperBound
+                      let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: result, buffer: completeBuffer)]).rawDescription
+                      print("[chainBwd] Logic A ('\(selectedWordToken.value)') -> Preceding Dot ('\(precedingToken.value)') -> \(resultDesc)")
+                      return result // Result: |.word| or |?.word|
+                 }
+            }
+        }
+
+        // --- Step 2 (Logic B): Expand chain selection backward to include preceding dot/? ---
+        // Check if the selection *doesn't* start with dot/? but is preceded by one.
+        let firstTokenIndex = tokens.firstIndex(where: {$0.range.lowerBound == selection.lowerBound})
+        if let index = firstTokenIndex, index > 0 {
+             let currentFirstToken = tokens[index]
+             // Ensure selection doesn't already start with the dot we might find
+             if currentFirstToken.kind != .dot && currentFirstToken.kind != .optionalDot {
+                  let precedingToken = tokens[index - 1]
+                  if precedingToken.kind == .dot || precedingToken.kind == .optionalDot {
+                       // Check adjacency
+                       let gap = completeBuffer[precedingToken.range.upperBound..<selection.lowerBound]
+                        if gap.isEmpty || gap.allSatisfy({ $0.isWhitespace }) {
+                             // Selection is like |optional.value|. Expand to include preceding dot/?.
+                             let result = precedingToken.range.lowerBound..<selection.upperBound
+                             let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: result, buffer: completeBuffer)]).rawDescription
+                             print("[chainBwd] Logic B (Expand chain for dot) -> \(resultDesc)")
+                             return result // Result: |.optional.value| or |?.optional?.value|
+                        }
+                  }
+             }
+        }
+
+        // --- Step 3 (Logic C): Handle selection starting with dot/? -> Expand back to include preceding word ---
+        if let firstToken = tokens.first(where: {$0.range.lowerBound == selection.lowerBound}),
+           (firstToken.kind == .dot || firstToken.kind == .optionalDot),
+           let firstTokenIndex = tokens.firstIndex(of: firstToken), firstTokenIndex > 0 {
+
+            let tokenBeforeDot = tokens[firstTokenIndex - 1]
+            if tokenBeforeDot.kind == .word {
+                let gap = completeBuffer[tokenBeforeDot.range.upperBound..<firstToken.range.lowerBound]
+                if gap.isEmpty || gap.allSatisfy({$0.isWhitespace}) {
+                     let result = tokenBeforeDot.range.lowerBound..<selection.upperBound
+                     let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: result, buffer: completeBuffer)]).rawDescription
+                     print("[chainBwd] Logic C ('\(completeBuffer[selection])') -> Preceding Word ('\(tokenBeforeDot.value)') -> \(resultDesc)")
+                     return result // Result: |prevWord.word| or |prevWord?.word|
+                }
+            }
+        }
+        print("[chainBwd] Fallback -> No Change")
+        // No chain expansion rule applied for this selection
+        return selection
+    }
 }
 
 // MARK: -
@@ -715,6 +765,14 @@ public struct SourceTextRange: Equatable {
     public init(start: SourceTextPosition, end: SourceTextPosition) {
         self.start = start
         self.end = end
+    }
+
+    init(range: Range<String.Index>, buffer: String) {
+         let startOffset = buffer.distance(from: buffer.startIndex, to: range.lowerBound)
+         let endOffset = buffer.distance(from: buffer.startIndex, to: range.upperBound)
+         // Assuming single line for simplicity in debugging
+         self.init(start: SourceTextPosition(line: 0, column: startOffset),
+                   end: SourceTextPosition(line: 0, column: endOffset))
     }
 }
 
