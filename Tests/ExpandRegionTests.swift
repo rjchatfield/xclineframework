@@ -284,6 +284,122 @@ import Testing
     )
 }
 
+@Test func testDictionaryMultipleFromKeyComplex1() {
+    expect(
+        expandsStepByStep: {
+            #" ["foo.bar.baz": value1!, "foo bar baz": val|ue2?.foo, "foo/bar/baz": value3 as AnyObject] "# // I'm in the middle of a word, I should select the word
+            #" ["foo.bar.baz": value1!, "foo bar baz": |value2|?.foo, "foo/bar/baz": value3 as AnyObject] "# // I have selected a just word in a value of a Dictionary's key/value pair, I should select the whole value
+            #" ["foo.bar.baz": value1!, "foo bar baz": |value2?.foo|, "foo/bar/baz": value3 as AnyObject] "# // I have selected the value of a Dictionary's key/value pair, I should select the key and the value
+            #" ["foo.bar.baz": value1!, |"foo bar baz": value2?.foo|, "foo/bar/baz": value3 as AnyObject] "# // I have selected a Dictionary's key/value pair, I should select all the other key/value pairs in the dictionary
+            #" [|"foo.bar.baz": value1!, "foo bar baz": value2?.foo, "foo/bar/baz": value3 as AnyObject|] "# // I have selected every key/value pair in the dictionary, I should select the square brackets too
+            #" |["foo.bar.baz": value1!, "foo bar baz": value2?.foo, "foo/bar/baz": value3 as AnyObject]| "# // I have selected the dictionary
+        }
+    )
+}
+
+@Test func testDictionaryMultipleFromKeyComplex2() {
+    expect(
+        expandsStepByStep: {
+            #" ["foo.bar.baz": value1!, "foo |bar baz": value2?.foo, "foo/bar/baz": value3 as AnyObject] "# // I'm at the start of a word, I should select the word
+            #" ["foo.bar.baz": value1!, "foo |bar| baz": value2?.foo, "foo/bar/baz": value3 as AnyObject] "# // I have selected a just word in a string, I should select the string contents
+            #" ["foo.bar.baz": value1!, "|foo bar baz|": value2?.foo, "foo/bar/baz": value3 as AnyObject] "# // I have selected the string contents, I should select the quotes too
+            #" ["foo.bar.baz": value1!, |"foo bar baz"|: value2?.foo, "foo/bar/baz": value3 as AnyObject] "# // I have selected the key of a Dictionary's key/value pair, I should select the key and the value
+            #" ["foo.bar.baz": value1!, |"foo bar baz": value2?.foo|, "foo/bar/baz": value3 as AnyObject] "# // I have selected a Dictionary's key/value pair, I should select all the other key/value pairs in the dictionary
+            #" [|"foo.bar.baz": value1!, "foo bar baz": value2?.foo, "foo/bar/baz": value3 as AnyObject|] "# // I have selected every key/value pair in the dictionary, I should select the square brackets too
+            #" |["foo.bar.baz": value1!, "foo bar baz": value2?.foo, "foo/bar/baz": value3 as AnyObject]| "# // I have selected the dictionary
+        }
+    )
+}
+
+@Test func testDictionaryMultipleFromKeyComplex3() {
+    expect(
+        expandsStepByStep: {
+            #" ["foo.bar.baz": value1!, "foo bar baz": value2?.foo, "foo/bar/baz": valu|e3 as? AnyObject] "# // I'm in the middle of a word, I should select the word
+            #" ["foo.bar.baz": value1!, "foo bar baz": value2?.foo, "foo/bar/baz": |value3| as? AnyObject] "# // I have selected a word in a value of a Dictionary's key/value pair, I should select the whole value
+            #" ["foo.bar.baz": value1!, "foo bar baz": value2?.foo, "foo/bar/baz": |value3 as? AnyObject|] "# // I have selected the value of a Dictionary's key/value pair, I should select the key and the value
+            #" ["foo.bar.baz": value1!, "foo bar baz": value2?.foo, |"foo/bar/baz": value3 as? AnyObject|] "# // I have selected a Dictionary's key/value pair, I should select all the other key/value pairs in the dictionary
+            #" [|"foo.bar.baz": value1!, "foo bar baz": value2?.foo, "foo/bar/baz": value3 as? AnyObject|] "# // I have selected every key/value pair in the dictionary, I should select the square brackets too
+            #" |["foo.bar.baz": value1!, "foo bar baz": value2?.foo, "foo/bar/baz": value3 as? AnyObject]| "# // I have selected the dictionary
+        }
+    )
+}
+
+// MARK: - Swift Syntax Cases - Ternary Operator
+
+@Test func testTernaryOperator1() {
+    expect(
+        expandsStepByStep: {
+            "let result = isVa|lid ? trueValue : falseValue" // I'm in the middle of a word, I should select the word
+            "let result = |isValid| ? trueValue : falseValue" // I have selected the condition of the ternary, I should select the whole ternary
+            "let result = |isValid ? trueValue : falseValue|" // I have selected the whole assignment value
+        }
+    )
+}
+
+@Test func testTernaryOperator2() {
+    expect(
+        expandsStepByStep: {
+            "let result = isValid ? tru|eValue : falseValue" // I'm in the middle of a word, I should select the word
+            "let result = isValid ? |trueValue| : falseValue" // I have selected one value in the ternary, I should select the whole ternary
+            "let result = |isValid ? trueValue : falseValue|" // I have selected the whole assignment value
+        }
+    )
+}
+
+@Test func testTernaryOperator3() {
+    expect(
+        expandsStepByStep: {
+            "let result = isValid ? trueValue : fals|eValue" // I'm in the middle of a word, I should select the word
+            "let result = isValid ? trueValue : |falseValue|" // I have selected one value in the ternary, I should select the whole ternary
+            "let result = |isValid ? trueValue : falseValue|" // I have selected the whole assignment value
+        }
+    )
+}
+
+@Test func testNestedTernaryOperator() {
+    expect(
+        expandsStepByStep: {
+            "let result: MyEnum = isValid ? (hasPermission ? .allow|ed : .denied) : falseValue" // I'm in the middle of a word, I should select the word
+            "let result: MyEnum = isValid ? (hasPermission ? .|allowed| : .denied) : falseValue" // I have selected one value in the inner ternary, I should select both values
+            "let result: MyEnum = isValid ? (hasPermission ? |.allowed| : .denied) : falseValue" // I have selected one value in the inner ternary, I should select both values
+            "let result: MyEnum = isValid ? (|hasPermission ? .allowed : .denied|) : falseValue" // I have selected the inner ternary expression, I should select the parentheses
+            "let result: MyEnum = isValid ? |(hasPermission ? .allowed : .denied)| : falseValue" // I have selected one value in the outer ternary, I should select both values
+            "let result: MyEnum = |isValid ? (hasPermission ? .allowed : .denied) : falseValue|" // I have selected both values, I should select the outer condition
+        }
+    )
+}
+
+@Test func testTernaryIf1() {
+    expect(
+        expandsStepByStep: {
+            "let result = if isVa|lid { trueValue } else { falseValue }" // I'm in the middle of a word, I should select the word
+            "let result = if |isValid| { trueValue } else { falseValue }" // I have selected the condition of the ternary, I should select the whole if statement
+            "let result = |if isValid { trueValue } else { falseValue }|".lowCareScore() // I have selected the whole assignment value
+        }
+    )
+}
+
+@Test func testTernaryIf2() {
+    expect(
+        expandsStepByStep: {
+            "let result = if isValid { true|Value } else { falseValue }" // I'm in the middle of a word, I should select the word
+            "let result = if isValid { |trueValue| } else { falseValue }" // I have selected one value in the ternary, I should select the whole if statement
+            "let result = |if isValid { trueValue } else { falseValue }|".lowCareScore() // I have selected the whole assignment value
+        }
+    )
+}
+
+@Test func testTernaryIf3() {
+    expect(
+        expandsStepByStep: {
+            "let result = if isValid { trueValue } else { f|alseValue }" // I'm in the middle of a word, I should select the word
+            "let result = if isValid { trueValue } else { |falseValue| }" // I have selected one value in the ternary, I should select the whole if statement
+            "let result = |if isValid { trueValue } else { falseValue }|".lowCareScore() // I have selected the whole assignment value
+        }
+    )
+}
+
+
 // MARK: - Swift Syntax Cases - Functions
 
 @Test func testFunctionParameters() {
