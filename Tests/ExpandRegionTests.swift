@@ -1,7 +1,18 @@
 import Testing
 @_spi(Testing) import XCLineFramework
 
-/// Tests for the Expand Region feature, which handles text selection expansion.
+/// Test Case Categories:
+/// 1. Basic String Cases
+///    - Words with/without spaces
+///    - Words with quotes
+///    - Words with quotes and spaces
+/// 2. Swift Syntax Cases
+///    - Arrays (basic, nested)
+///    - Dictionaries (single, multiple, from key/value)
+///    - Functions (parameters, multiple parameters, labeled parameters)
+///    - Generics (basic, multiple parameters, complex)
+///    - Closures (simple, multiple params, with parentheses)
+///    - Other (protocols, properties, chaining)
 ///
 /// Each test verifies selection behavior using string patterns where:
 /// - `|` represents cursor position or selection boundaries
@@ -14,6 +25,46 @@ import Testing
 /// Two types of expect() are used (see method signature for more details):
 /// - `expect(eachInitialCase:expandsTo:thenExpandsStepByStepTo:)`
 /// - `expect(expandsStepByStep:)`
+
+/// Result builder for constructing test cases with source location tracking
+/// This builder enables fluent test case definition while maintaining
+/// accurate source location information for error reporting
+
+/// Common Expansion Patterns:
+/// 1. Word Selection
+///    - Start: Select from cursor to end of word
+///    - Middle: Select entire word
+///    - End: Select from start of word to cursor
+/// 2. Container Selection
+///    - First select content
+///    - Then select delimiters (quotes, brackets, parentheses)
+/// 3. Parameter Selection
+///    - First select the word (either name or type)
+///    - Then select both the name and type
+///    - Then select all parameters
+
+/// When a test fails, check:
+/// 1. Word Boundaries
+///    - Is the word correctly identified?
+///    - Are spaces properly handled?
+/// 2. Container Boundaries
+///    - Are quotes/brackets/parentheses properly paired?
+///    - Is nesting properly handled?
+/// 3. Syntax Context
+///    - Is the correct syntax node being selected?
+///    - Are adjacent tokens properly included/excluded?
+
+/// Adding New Test Cases:
+/// 1. Start with basic cases
+///    - Single word
+///    - Simple containers
+/// 2. Add complexity
+///    - Nested structures
+///    - Mixed syntax
+/// 3. Add edge cases
+///    - Empty containers
+///    - Special characters
+///    - Unicode
 
 // MARK: - Basic String Cases
 
@@ -224,7 +275,7 @@ import Testing
     expect(
         expandsStepByStep: {
             #" ["key1": value1, "|key2": value2] "# // I'm at the start of a word, I should select the word
-            #" ["key1": value1, "|key2|": value2|] "# // I am at the edges of a string, I should select the quotes too
+            #" ["key1": value1, "|key2|": value2|] "# // I am at the edges of the string, I should select the quotes too
             #" ["key1": value1, |"key2"|: value2|] "# // I have selected a key in a dictionary, I should select both the key and the value
             #" ["key1": value1, |"key2": value2|] "# // I have selected a key/value pair in a dictionary, I should select every key/value pair in a dictionary
             #" [|"key1": value1, "key2": value2|] "# // I have selected every key/value pair in a dictionary, I should select the square brackets too
@@ -239,7 +290,7 @@ import Testing
     expect(
         expandsStepByStep: {
             "func test(param1: |String)" // I'm at the start of a word, I should select the word
-            "func test(param1: |String|)" // I have selected the type of the parameter, I should select the parameter too
+            "func test(param1: |String|)" // I have selected the type of a parameter, I should select the parameter too because in Swift, parameter names and types form a semantic unit that should be selected together
             "func test(|param1: String|)" // I have selected all the elements of a tuple, I should select the parentheses too
             "func test|(param1: String)|" // I have selected a tuple
         }
@@ -251,8 +302,8 @@ import Testing
         expandsStepByStep: {
             "foo(arg|1: String, arg2: String)" // I'm in the middle of a word, I should select the word
             "foo(|arg1|: String, arg2: String)" // I have selected the name of the parameter, I should select the type of the parameter too
-            "foo(|arg1: String|, arg2: String)" // I have selected an element in a tuple, I should select all the elements of the tuple
-            "foo(|arg1: String, arg2: String|)" // I have selected all the elements of a tuple, I should select the parentheses too
+            "foo(|arg1: String|, arg2: String)" // I have selected an element in the tuple, I should select all the elements of the tuple
+            "foo(|arg1: String, arg2: String|)" // I have selected all the elements of the tuple, I should select the parentheses too
             "foo|(arg1: String, arg2: String)|" // I have selected a tuple
         }
     )
@@ -263,8 +314,8 @@ import Testing
         expandsStepByStep: {
             "foo(in arg1: String, at arg2|: String)" // I'm at the end of a word, I should select the word
             "foo(in arg1: String, at |arg2|: String)" // I have selected the internal argument name of a parameter, I should select the external argument name and type of the parameter
-            "foo(in arg1: String, |at arg2: String|)" // I have selected an element in a tuple, I should select all the elements of the tuple
-            "foo(|in arg1: String, at arg2: String|)" // I have selected all the elements of a tuple, I should select the parentheses too
+            "foo(in arg1: String, |at arg2: String|)" // I have selected an element in the tuple, I should select all the elements of the tuple
+            "foo(|in arg1: String, at arg2: String|)" // I have selected all the elements of the tuple, I should select the parentheses too
             "foo|(in arg1: String, at arg2: String)|" // I have selected a tuple
         }
     )
@@ -489,6 +540,13 @@ import Testing
 /// This helper function tests that when repeatedly expanding a selection, it progresses through
 /// each of the expected states in sequence. It takes an array of expected states and verifies
 /// that the first expansion matches the first state, then subsequent expansions match the remaining states.
+///
+/// Testing Strategy:
+/// 1. Verify initial selection expands to first expected state
+/// 2. For each subsequent state:
+///    - Take the previous state as input
+///    - Verify expansion matches next expected state
+///    - Continue until all states are verified
 ///
 /// - Parameters:
 ///   - expectations: A closure returning an array of `TestInfo` representing the expected selection states
