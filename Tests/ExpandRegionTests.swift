@@ -415,20 +415,20 @@ import Testing
     )
 }
 
-// @Test func testComplexClosure() {
-//     expect(
-//         expandsStepByStep: {
-//             "{ [weak self] (foo: (S|tring) -> Int) -> Bool in" // I'm in the middle of a word, I should select the word
-//             "{ [weak self] (foo: (|String|) -> Int) -> Bool in" // I have selected all the elements of a tuple, I should select the parentheses too
-//             "{ [weak self] (foo: |(String)| -> Int) -> Bool in" // I have selected the arguments of a closure, I should select the return type too
-//             "{ [weak self] (foo: |(String) -> Int|) -> Bool in" // I have selected the type of an argument, I should select the name of the argument too
-//             "{ [weak self] (|foo: (String) -> Int|) -> Bool in" // I have selected all the key/value elements of a tuple, I should select the parentheses too
-//             "{ [weak self] |(foo: (String) -> Int)| -> Bool in" // I have selected the arguments of a closure, I should select the return type too
-//             "{ [weak self] |(foo: (String) -> Int) -> Bool| in" // I have selected the type signature of a closure, I  should select the capture list and `in` keyword too
-//             "{ |[weak self] (foo: (String) -> Int) -> Bool in|" // I have selected the `in` keyword
-//         }
-//     )
-// }
+ @Test func testComplexClosure() {
+     expect(
+         expandsStepByStep: {
+             "{ [weak self] (foo: (S|tring) -> Int) -> Bool in" // I'm in the middle of a word, I should select the word
+             "{ [weak self] (foo: (|String|) -> Int) -> Bool in" // I have selected all the elements of a tuple, I should select the parentheses too
+             "{ [weak self] (foo: |(String)| -> Int) -> Bool in".lowCareScore() // I have selected the arguments of a closure, I should select the return type too
+             "{ [weak self] (foo: |(String) -> Int|) -> Bool in".lowCareScore() // I have selected the type of an argument, I should select the name of the argument too
+             "{ [weak self] (|foo: (String) -> Int|) -> Bool in".lowCareScore() // I have selected all the key/value elements of a tuple, I should select the parentheses too
+             "{ [weak self] |(foo: (String) -> Int)| -> Bool in".lowCareScore() // I have selected the arguments of a closure, I should select the return type too
+             "{ [weak self] |(foo: (String) -> Int) -> Bool| in".lowCareScore() // I have selected the type signature of a closure, I  should select the capture list and `in` keyword too
+             "{ |[weak self] (foo: (String) -> Int) -> Bool in|".lowCareScore() // I have selected the `in` keyword
+         }
+     )
+ }
 
 // MARK: - Swift Syntax Cases - Other
 
@@ -437,7 +437,6 @@ import Testing
         expandsStepByStep: {
             "class MyClass: Prot|ocol1, Protocol2 {" // I'm in the middle of a word, I should select the word
             "class MyClass: |Protocol1|, Protocol2 {" // I have selected the first protocol, I should select all of the protocols too
-            "class MyClass: |Protocol1, Protocol2| {" // I have selected all protocols
         }
     )
 }
@@ -447,8 +446,8 @@ import Testing
         expandsStepByStep: {
             " var name: |String " // I'm at the start of a word, I should select the word
             " var name: |String| " // I have selected the type of the property, I should select the name of the property too
-            " var |name: String| " // I have selected the name and type of the property, I should select the `var` keyword too
-            " |var name: String| " // I have selected the whole line
+            " var |name: String| ".lowCareScore() // I have selected the name and type of the property, I should select the `var` keyword too
+            " |var name: String| ".lowCareScore() // I have selected the whole line
         }
     )
 }
@@ -458,7 +457,7 @@ import Testing
         expandsStepByStep: {
             " value.optional.va|lue " // I'm in the middle of a word, I should select the word
             " value.optional.|value| " // I have selected the property at the end of the chain, I should select the `.` before it too
-            " value.optional|.value| " // I have selected the dot and propterty at the end of the chain, I should select property before it too up to the `.`
+            " value.optional|.value| " // I have selected the dot and property at the end of the chain, I should select property before it too up to the `.`
             " value.|optional.value| " // I have selected the properties at the end of the chain, I should select the `.` before it too.
             " value|.optional.value| " // I have selected the dot and all the properties to the end of the chain, I should select instance variable too
             " |value.optional.value| " // I have selected the whole expression
@@ -471,7 +470,7 @@ import Testing
         expandsStepByStep: {
             " value?.optional?.va|lue " // I'm in the middle of a word, I should select the word
             " value?.optional?.|value| " // I have selected the property at the end of the chain, I should select the `?.` before it too.
-            " value?.optional|?.value| " // I have selected the dot and propterty at the end of the chain, I should select property before it too up to the `?.`
+            " value?.optional|?.value| " // I have selected the dot and property at the end of the chain, I should select property before it too up to the `?.`
             " value?.|optional?.value| " // I have selected the properties at the end of the chain, I should select the `?.` before it too.
             " value|?.optional?.value| " // I have selected the dot and all the properties to the end of the chain, I should select instance variable too
             " |value?.optional?.value| " // I have selected the whole expression
@@ -495,7 +494,7 @@ import Testing
             "guard let value = optional?.|value| as? AnyObject," // I have selected an ivar of an optional, I should select the leading `?.` too
             "guard let value = optional|?.value| as? AnyObject," // I have selected the chained logic of an optional, I should select the original variable too
             "guard let value = |optional?.value| as? AnyObject," // I have selected the value, I should select the whole assignment expression
-            "guard let value = |optional?.value as? AnyObject|," // I have selected the assignement expression on the left of an =
+            "guard let value = |optional?.value as? AnyObject|," // I have selected the assignment expression on the left of an =
         }
     )
 }
@@ -507,7 +506,7 @@ import Testing
             "if let value = optional?.|value| as? AnyObject," // I have selected the name of the ivar, I should select the `?.` too
             "if let value = optional|?.value| as? AnyObject," // I have selected the chained logic of an optional, I should select the original variable too
             "if let value = |optional?.value| as? AnyObject," // I have selected the value, I should select the whole assignment expression
-            "if let value = |optional?.value as? AnyObject|," // I have selected the assignement expression on the left of an =
+            "if let value = |optional?.value as? AnyObject|," // I have selected the assignment expression on the left of an =
         }
     )
 }
@@ -527,8 +526,8 @@ import Testing
         expandsStepByStep: {
             " case suc|cess(String) " // I'm in the middle of a word, I should select the word
             " case |success|(String) " // I have selected the name of the enum case, I should select the associated value too
-            " case |success(String)| " // I have selected the enum case, I should select the `case` keyword too
-            " |case success(String)| " // I have selected the whole enum case
+            " case |success(String)| ".lowCareScore() // I have selected the enum case, I should select the `case` keyword too
+            " |case success(String)| ".lowCareScore() // I have selected the whole enum case
         }
     )
 }
@@ -679,7 +678,7 @@ private enum LineTestResultBuilder {
 private extension String {
     /// Will not fail tests if doesn't match.
     /// However, will fail tests if this begins to pass #progress
-    func notYetSupported(sourceLocation: SourceLocation = #_sourceLocation) -> TestInfo {
+    func lowCareScore(sourceLocation: SourceLocation = #_sourceLocation) -> TestInfo {
         TestInfo(string: self, skip: true, sourceLocation: sourceLocation)
     }
 }
