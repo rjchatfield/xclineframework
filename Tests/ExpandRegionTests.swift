@@ -1,6 +1,20 @@
 import Testing
 @_spi(Testing) import XCLineFramework
 
+/// Tests for the Expand Region feature, which handles text selection expansion.
+///
+/// Each test verifies selection behavior using string patterns where:
+/// - `|` represents cursor position or selection boundaries
+/// - Text between two `|` marks represents selected text
+/// - Comments trailing each string explain the self assessment of where it is, followed by the expected expansion behavior
+///
+/// Example: "h|ello" means cursor is between 'h' and 'e'
+///         "|hello|" means entire word is selected
+///
+/// Two types of expect() are used (see method signature for more details):
+/// - `expect(eachInitialCase:expandsTo:thenExpandsStepByStepTo:)`
+/// - `expect(expandsStepByStep:)`
+
 // MARK: - Basic String Cases
 
 @Test func testBasicStringWithSpace() {
@@ -108,18 +122,62 @@ import Testing
 
 // MARK: - Swift Syntax Cases - Arrays
 
-@Test func testBasicArray() {
+@Test func testBasicArrayFirstElement() {
     expect(
         eachInitialCase: {
-            "[1, 2, |3, 4]"
-            "[1, 2, 3|, 4]"
+            "[|789, 1, 3, 4]" // I'm at the start of an element in an array, I should select the whole element
+            "[|7|89, 1, 3, 4]" // I'm at the start of an element in an array, I should select the whole element
+            "[7|89, 1, 3, 4]" // I'm in the middle of an element in an array, I should select the whole element
+            "[7|8|9, 1, 3, 4]" // I'm in the middle of an element in an array, I should select the whole element
+            "[789|, 1, 3, 4]" // I'm at the end of an element in an array, I should select the whole element
+            "[78|9|, 1, 3, 4]" // I'm at the end of an element in an array, I should select the whole element
         },
         expandsTo: {
-            "[1, 2, |3|, 4]"
+            "[|789|, 1, 3, 4]" // I have selected the whole element in an array, I should select every element in the array
         },
         thenExpandsStepByStepTo: {
-            "[|1, 2, 3, 4|]"
-            "|[1, 2, 3, 4]|"
+            "[|789, 1, 3, 4|]" // I have selected every element in the array, I should select the square brackets too
+            "|[789, 1, 3, 4]|" // I have selected the whole array
+        }
+    )
+}
+
+@Test func testBasicArrayMiddleElement() {
+    expect(
+        eachInitialCase: {
+            "[1, |789, 3, 4]" // I'm at the start of an element in an array, I should select the whole element
+            "[1, |7|89, 3, 4]" // I'm at the start of an element in an array, I should select the whole element
+            "[1, 7|89, 3, 4]" // I'm in the middle of an element in an array, I should select the whole element
+            "[1, 7|8|9, 3, 4]" // I'm in the middle of an element in an array, I should select the whole element
+            "[1, 789|, 3, 4]" // I'm at the end of an element in an array, I should select the whole element
+            "[1, 78|9|, 3, 4]" // I'm at the end of an element in an array, I should select the whole element
+        },
+        expandsTo: {
+            "[1, |789|, 3, 4]" // I have selected the whole element in an array, I should select every element in the array
+        },
+        thenExpandsStepByStepTo: {
+            "[|1, 789, 3, 4|]" // I have selected every element in the array, I should select the square brackets too
+            "|[1, 789, 3, 4]|" // I have selected the whole array
+        }
+    )  
+}
+
+@Test func testBasicArrayLastElement() {
+    expect(
+        eachInitialCase: {
+            "[1, |789, 3, 4]" // I'm at the start of an element in an array, I should select the whole element
+            "[1, |7|89, 3, 4]" // I'm at the start of an element in an array, I should select the whole element
+            "[1, 7|89, 3, 4]" // I'm in the middle of an element in an array, I should select the whole element
+            "[1, 7|8|9, 3, 4]" // I'm in the middle of an element in an array, I should select the whole element
+            "[1, 789|, 3, 4]" // I'm at the end of an element in an array, I should select the whole element
+            "[1, 78|9|, 3, 4]" // I'm at the end of an element in an array, I should select the whole element
+        },
+        expandsTo: {
+            "[1, |789|, 3, 4]" // I have selected the whole element in an array, I should select every element in the array
+        },
+        thenExpandsStepByStepTo: {
+            "[|1, 789, 3, 4|]" // I have selected every element in the array, I should select the square brackets too
+            "|[1, 789, 3, 4]|" // I have selected the whole array
         }
     )
 }
@@ -127,24 +185,50 @@ import Testing
 @Test func testNestedArrays() {
     expect(
         expandsStepByStep: {
-            "[[1, |2|], [3, 4]]"
-            "[[|1, 2|], [3, 4]]"
-            "[|[1, 2]|, [3, 4]]"
-            "[|[1, 2], [3, 4]|]"
-            "|[[1, 2], [3, 4]]|"
+            " [[1, |2], [3, 4]] " // I'm at the start of an element in an array, I should select the whole element
+            " [[1, |2|], [3, 4]] " // I have selected the whole element in an array, I should select every element in the array
+            " [[|1, 2|], [3, 4]] " // I have selected every element in the array, I should select the square brackets too
+            " [|[1, 2]|, [3, 4]] " // I have selected the whole element in an array, I should select every element in the array
+            " [|[1, 2], [3, 4]|] " // I have selected every element in the array, I should select the square brackets too
+            " |[[1, 2], [3, 4]]| " // I have selected the whole array
         }
     )
 }
 
 // MARK: - Swift Syntax Cases - Dictionaries
 
-@Test func testDictionary() {
+@Test func testDictionarySingle() {
     expect(
         expandsStepByStep: {
-            #"["key": |value]"#
-            #"["key": |value|]"#
-            #"[|"key": value|]"#
-            #"|["key": value]|"#
+            #" ["key": |value] "# // I'm at the start of a word, I should select the word
+            #" ["key": |value|] "# // I'm have selected a value in a dictionary, I should select both the key and the value
+            #" [|"key": value|] "# // I have selected every key/value pair in the dictionary, I should select the square brackets too
+            #" |["key": value]| "# // I have selected the dictionary
+        }
+    )
+}
+
+@Test func testDictionaryMultipleFromValue() {
+    expect(
+        expandsStepByStep: {
+            #" ["key1": value1, "key2": |value2] "# // I'm at the start of a word, I should select the word
+            #" ["key1": value1, "key2": |value2|] "# // I'm have selected a value in a dictionary, I should select both the key and the value
+            #" ["key1": value1, |"key2": value2|] "# // I have selected a key/value pair in a dictionary, I should select every key/value pair in a dictionary
+            #" [|"key1": value1, "key2": value2|] "# // I have selected every key/value pair in a dictionary, I should select the square brackets too
+            #" |["key1": value1, "key2": value2]| "# // I have selected the dictionary
+        }
+    )
+}
+
+@Test func testDictionaryMultipleFromKey() {
+    expect(
+        expandsStepByStep: {
+            #" ["key1": value1, "|key2": value2] "# // I'm at the start of a word, I should select the word
+            #" ["key1": value1, "|key2|": value2|] "# // I am at the edges of a string, I should select the quotes too
+            #" ["key1": value1, |"key2"|: value2|] "# // I have selected a key in a dictionary, I should select both the key and the value
+            #" ["key1": value1, |"key2": value2|] "# // I have selected a key/value pair in a dictionary, I should select every key/value pair in a dictionary
+            #" [|"key1": value1, "key2": value2|] "# // I have selected every key/value pair in a dictionary, I should select the square brackets too
+            #" |["key1": value1, "key2": value2]| "#
         }
     )
 }
@@ -154,11 +238,10 @@ import Testing
 @Test func testFunctionParameters() {
     expect(
         expandsStepByStep: {
-            "func test(param1: |String)"
-            "func test(param1: |String|)"
-            "func test(|param1: String|)"
-            "func test|(param1: String)|"
-            "func |test(param1: String)|".notYetSupported()
+            "func test(param1: |String)" // I'm at the start of a word, I should select the word
+            "func test(param1: |String|)" // I have selected the type of the parameter, I should select the parameter too
+            "func test(|param1: String|)" // I have selected all the elements of a tuple, I should select the parentheses too
+            "func test|(param1: String)|" // I have selected a tuple
         }
     )
 }
@@ -166,11 +249,11 @@ import Testing
 @Test func testFunctionWithMultipleParameters() {
     expect(
         expandsStepByStep: {
-            "foo(arg|1: String, arg2: String)"
-            "foo(|arg1|: String, arg2: String)"
-            "foo(|arg1: String|, arg2: String)"
-            "foo(|arg1: String, arg2: String|)"
-            "foo|(arg1: String, arg2: String)|"
+            "foo(arg|1: String, arg2: String)" // I'm in the middle of a word, I should select the word
+            "foo(|arg1|: String, arg2: String)" // I have selected the name of the parameter, I should select the type of the parameter too
+            "foo(|arg1: String|, arg2: String)" // I have selected an element in a tuple, I should select all the elements of the tuple
+            "foo(|arg1: String, arg2: String|)" // I have selected all the elements of a tuple, I should select the parentheses too
+            "foo|(arg1: String, arg2: String)|" // I have selected a tuple
         }
     )
 }
@@ -178,10 +261,11 @@ import Testing
 @Test func testFunctionWithLabeledParameters() {
     expect(
         expandsStepByStep: {
-            "foo(in arg1: String, at |arg2|: String)"
-            "foo(in arg1: String, |at arg2: String|)"
-            "foo(|in arg1: String, at arg2: String|)"
-            "foo|(in arg1: String, at arg2: String)|"
+            "foo(in arg1: String, at arg2|: String)" // I'm at the end of a word, I should select the word
+            "foo(in arg1: String, at |arg2|: String)" // I have selected the internal argument name of a parameter, I should select the external argument name and type of the parameter
+            "foo(in arg1: String, |at arg2: String|)" // I have selected an element in a tuple, I should select all the elements of the tuple
+            "foo(|in arg1: String, at arg2: String|)" // I have selected all the elements of a tuple, I should select the parentheses too
+            "foo|(in arg1: String, at arg2: String)|" // I have selected a tuple
         }
     )
 }
@@ -191,10 +275,10 @@ import Testing
 @Test func testGenericType() {
     expect(
         expandsStepByStep: {
-            "let array: Array<|String>"
-            "let array: Array<|String|>"
-            "let array: Array|<String>|"
-            "let array: |Array<String>|".notYetSupported()
+            "let array: Array<|String>" // I'm at the start of a word, I should select the word
+            "let array: Array<|String|>" // I have selected the all the elements of the generic, I should select the angle brackets too
+            "let array: Array|<String>|" // I have selected the generic, I should select the whole type
+            "let array: |Array<String>|" // I have selected the whole type
         }
     )
 }
@@ -202,11 +286,11 @@ import Testing
 @Test func testMultipleGenericParameters() {
     expect(
         expandsStepByStep: {
-            "Dictionary<|String, Int>"
-            "Dictionary<|String|, Int>"
-            "Dictionary<|String, Int|>"
-            "Dictionary|<String, Int>|"
-            "|Dictionary<String, Int>|"
+            "Dictionary<|String, Int>" // I'm at the start of a word, I should select the word
+            "Dictionary<|String|, Int>" // I have selected an element in a generic, I should select all of the elements of the generic
+            "Dictionary<|String, Int|>" // I have selected all of the elements of a generic, I should select the angle brackets too
+            "Dictionary|<String, Int>|" // I have selected the generic, I should select the whole type
+            "|Dictionary<String, Int>|" // I have selected the whole type
         }
     )
 }
@@ -214,19 +298,19 @@ import Testing
 @Test func testComplexGenericType() {
     expect(
         eachInitialCase: {
-            "Dictionary<String, Array<|Int>>"
-            "Dictionary<String, Array<I|nt>>"
-            "Dictionary<String, Array<Int|>>"
+            "Dictionary<String, Array<|Int>>" // I'm at the start of a word, I should select the word
+            "Dictionary<String, Array<I|nt>>" // I'm in the middle of a word, I should select the word
+            "Dictionary<String, Array<Int|>>" // I'm at the end of a word, I should select the word
         },
         expandsTo: {
-            "Dictionary<String, Array<|Int|>>"
+            "Dictionary<String, Array<|Int|>>" // I have selected all the elements of a generic, I should select the angle brackets too
         },
         thenExpandsStepByStepTo: {
-            "Dictionary<String, Array|<Int>|>"
-            "Dictionary<String, |Array<Int>|>"
-            "Dictionary<|String, Array<Int>|>"
-            "Dictionary|<String, Array<Int>>|"
-            "|Dictionary<String, Array<Int>>|"
+            "Dictionary<String, Array|<Int>|>" // I have selected the generic, I should select the whole type
+            "Dictionary<String, |Array<Int>|>" // I have selected an element in a generic, I should select all of the elements of the generic
+            "Dictionary<|String, Array<Int>|>" // I have selected all of the elements of a generic, I should select the angle brackets too
+            "Dictionary|<String, Array<Int>>|" // I have selected the generic, I should select the whole type
+            "|Dictionary<String, Array<Int>>|" // I have selected the whole type
         }
     )
 }
@@ -236,9 +320,9 @@ import Testing
 @Test func testSimpleClosure() {
     expect(
         expandsStepByStep: {
-            "{ |param in"
-            "{ |param| in"
-            "{ |param in|".notYetSupported()
+            "{ |param in" // I'm at the start of a word, I should select the word
+            "{ |param| in" // I have selected all of the parameters in the closure, I should select the `in` keyword to
+            "{ |param in|" // I have selected the `in` keyword
         }
     )
 }
@@ -246,10 +330,10 @@ import Testing
 @Test func testClosureWithMultipleParams() {
     expect(
         expandsStepByStep: {
-            "{ param, |p2 in"
-            "{ param, |p2| in"
-            "{ |param, p2| in".notYetSupported()
-            "{ |param, p2 in|".notYetSupported()
+            "{ param, |p2 in" // I'm at the start of a word, I should select the word
+            "{ param, |p2| in" // I have selected the second parameter, I should select all the parameters of the closure
+            "{ |param, p2| in" // I have selected all the parameters of the closure, I should select the `in` keyword too
+            "{ |param, p2 in|" // I have selected the `in` keyword
         }
     )
 }
@@ -257,11 +341,25 @@ import Testing
 @Test func testClosureWithParentheses() {
     expect(
         expandsStepByStep: {
-            "{ (param, |p2) in"
-            "{ (param, |p2|) in"
-            "{ (|param, p2|) in"
-            "{ |(param, p2)| in"
-            "{ |(param, p2) in|".notYetSupported()
+            "{ (param, |p2) in" // I'm at the start of a word, I should select the word
+            "{ (param, |p2|) in" // I have selected the second parameter, I should select all the parameters of the closure
+            "{ (|param, p2|) in" // I have selected all the parameters of the closure, I should select the parentheses too
+            "{ |(param, p2)| in" // I have selected the whole closure, I should select the `in` keyword too
+            "{ |(param, p2) in|" // I have selected the `in` keyword
+        }
+    )
+}
+
+@Test func testClosureWithParenthesesAndExplicitTypes() {
+    expect(
+        expandsStepByStep: {
+            "{ (param: String, |p2: String) -> Bool in" // I'm at the start of a word, I should select the word
+            "{ (param: String, |p2|: String) -> Bool in" // I have selected the name of the second parameter, I should select the type of the second parameter too
+            "{ (param: String, |p2: String|) -> Bool in" // I have selected a key/value element of a tuple, I should select all of the elements of the tuple
+            "{ (|param: String, p2: String|) -> Bool in" // I have selected all the elements of a tuple, I should select the parentheses too
+            "{ |(param: String, p2: String)| -> Bool in" // I have selected the arguments of the closure, I should select the return type too
+            "{ |(param: String, p2: String) -> Bool| in" // I have selected the return type of the closure, I should select the `in` keyword too
+            "{ |(param: String, p2: String) -> Bool in|" // I have selected the `in` keyword
         }
     )
 }
@@ -269,14 +367,14 @@ import Testing
 @Test func testComplexClosure() {
     expect(
         expandsStepByStep: {
-            "{ [weak self] (foo: (S|tring) -> Int) -> Bool in"
-            "{ [weak self] (foo: (|String|) -> Int) -> Bool in"
-            "{ [weak self] (foo: |(String)| -> Int) -> Bool in"
-            "{ [weak self] (foo: |(String) -> Int|) -> Bool in".notYetSupported()
-            "{ [weak self] (|foo: (String) -> Int|) -> Bool in"
-            "{ [weak self] |(foo: (String) -> Int)| -> Bool in"
-            "{ [weak self] |(foo: (String) -> Int) -> Bool| in".notYetSupported()
-            "{ |[weak self] (foo: (String) -> Int) -> Bool in|".notYetSupported()
+            "{ [weak self] (foo: (S|tring) -> Int) -> Bool in" // I'm in the middle of a word, I should select the word
+            "{ [weak self] (foo: (|String|) -> Int) -> Bool in" // I have selected all the elements of a tuple, I should select the parentheses too
+            "{ [weak self] (foo: |(String)| -> Int) -> Bool in" // I have selected the arguments of a closure, I should select the return type too
+            "{ [weak self] (foo: |(String) -> Int|) -> Bool in" // I have selected the type of an argument, I should select the name of the argument too
+            "{ [weak self] (|foo: (String) -> Int|) -> Bool in" // I have selected all the key/value elements of a tuple, I should select the parentheses too
+            "{ [weak self] |(foo: (String) -> Int)| -> Bool in" // I have selected the arguments of a closure, I should select the return type too
+            "{ [weak self] |(foo: (String) -> Int) -> Bool| in" // I have selected the type signature of a closure, I should select the capture list and `in` keyword too
+            "{ |[weak self] (foo: (String) -> Int) -> Bool in|" // I have selected the `in` keyword
         }
     )
 }
@@ -286,8 +384,9 @@ import Testing
 @Test func testProtocolConformance() {
     expect(
         expandsStepByStep: {
-            "class MyClass: |Protocol1|"
-            "class MyClass: |Protocol1, Protocol2|".notYetSupported()
+            "class MyClass: Prot|ocol1, Protocol2 {" // I'm in the middle of a word, I should select the word
+            "class MyClass: |Protocol1|, Protocol2 {" // I have selected the first protocol, I should select all of the protocols too
+            "class MyClass: |Protocol1, Protocol2| {" // I have selected all protocols
         }
     )
 }
@@ -295,10 +394,36 @@ import Testing
 @Test func testPropertyDeclaration() {
     expect(
         expandsStepByStep: {
-            "var name: |String"
-            "var name: |String|"
-            "var |name: String|".notYetSupported()
-            "|var name: String|"
+            " var name: |String " // I'm at the start of a word, I should select the word
+            " var name: |String| " // I have selected the type of the property, I should select the name of the property too
+            " var |name: String| " // I have selected the name and type of the property, I should select the `var` keyword too
+            " |var name: String| " // I have selected the whole line
+        }
+    )
+}
+
+@Test func testChainingFromEnd() {
+    expect(
+        expandsStepByStep: {
+            " value.optional.va|lue " // I'm at the start of a word, I should select the word
+            " value.optional.|value| " // I have selected the name of the ivar, I should select the `.` too
+            " value.optional|.value| " // I have selected the name of the dot and ivar, I should select instance variable too
+            " value.|optional.value| " // I have selected the name of the ivar and it's dot chaining, I should select the `.` too
+            " value|.optional.value| " // I have selected the name of the dot and ivar, I should select instance variable too
+            " |value.optional.value| " // I have selected the whole expression
+        }
+    )
+}
+
+@Test func testChainingOptionalsFromEnd() {
+    expect(
+        expandsStepByStep: {
+            " value?.optional?.va|lue " // I'm at the start of a word, I should select the word
+            " value?.optional?.|value| " // I have selected the name of the ivar, I should select the `?.` too
+            " value?.optional|?.value| " // I have selected the name of the dot and ivar, I should select instance variable too
+            " value?.|optional?.value| " // I have selected the name of the ivar and it's dot chaining, I should select the `?.` too
+            " value|?.optional?.value| " // I have selected the name of the dot and ivar, I should select instance variable too
+            " |value?.optional?.value| " // I have selected the whole expression
         }
     )
 }
@@ -306,10 +431,8 @@ import Testing
 @Test func testGuardStatement() {
     expect(
         expandsStepByStep: {
-            "guard let |value = optional as? AnyObject"
-            "guard let |value| = optional as? AnyObject"
-            "guard |let value| = optional as? AnyObject".notYetSupported()
-            "guard |let value = optional as? AnyObject|".notYetSupported()
+            "guard let |value = optional as? AnyObject" // I'm at the start of a word, I should select the word
+            "guard let |value| = optional as? AnyObject" // I have selected the name of the variable
         }
     )
 }
@@ -317,12 +440,11 @@ import Testing
 @Test func testGuardStatementWithOptionalChaining() {
     expect(
         expandsStepByStep: {
-            "guard let value = optional?.v|alue as? AnyObject,"
-            "guard let value = optional?.|value| as? AnyObject,"
-            "guard let value = optional|?.value| as? AnyObject,".notYetSupported()
-            "guard let value = |optional?.value| as? AnyObject,".notYetSupported()
-            "guard let value = |optional?.value as? AnyObject|,".notYetSupported()
-            "guard |let value = optional?.value as? AnyObject|,".notYetSupported()
+            "guard let value = optional?.v|alue as? AnyObject," // I'm in the middle of a word, I should select the word
+            "guard let value = optional?.|value| as? AnyObject," // I have selected an ivar of an optional, I should select the leading `?.` too
+            "guard let value = optional|?.value| as? AnyObject," // I have selected the chained logic of an optional, I should select the original variable too
+            "guard let value = |optional?.value| as? AnyObject," // I have selected the value, I should select the whole assignment expression
+            "guard let value = |optional?.value as? AnyObject|," // I have selected the assignement expression on the left of an =
         }
     )
 }
@@ -330,12 +452,11 @@ import Testing
 @Test func testIfLetStatement() {
     expect(
         expandsStepByStep: {
-            "if let value = optional?.v|alue as? AnyObject,"
-            "if let value = optional?.|value| as? AnyObject,"
-            "if let value = optional|?.value| as? AnyObject,".notYetSupported()
-            "if let value = |optional?.value| as? AnyObject,".notYetSupported()
-            "if let value = |optional?.value as? AnyObject|,".notYetSupported()
-            "if |let value = optional?.value as? AnyObject|,".notYetSupported()
+            "if let value = optional?.v|alue as? AnyObject," // I'm in the middle of a word, I should select the word
+            "if let value = optional?.|value| as? AnyObject," // I have selected the name of the ivar, I should select the `?.` too
+            "if let value = optional|?.value| as? AnyObject," // I have selected the chained logic of an optional, I should select the original variable too
+            "if let value = |optional?.value| as? AnyObject," // I have selected the value, I should select the whole assignment expression
+            "if let value = |optional?.value as? AnyObject|," // I have selected the assignement expression on the left of an =
         }
     )
 }
@@ -343,9 +464,9 @@ import Testing
 @Test func testSwitchCase() {
     expect(
         expandsStepByStep: {
-            "case .su|ccess: break"
-            "case |.success|: break".notYetSupported()
-            "|case .success: break|"
+            " case .su|ccess: break " // I'm in the middle of a word, I should select the word
+            " case .|success|: break " // I have selected the name of the enum case, I should select the `.` too
+            " case |.success|: break " // I have selected the name of the enum case
         }
     )
 }
@@ -353,16 +474,25 @@ import Testing
 @Test func testEnumDeclaration() {
     expect(
         expandsStepByStep: {
-            "case suc|cess(String)"
-            "case |success|(String)"
-            "case |success(String)|".notYetSupported()
-            "|case success(String)|"
+            " case suc|cess(String) " // I'm in the middle of a word, I should select the word
+            " case |success|(String) " // I have selected the name of the enum case, I should select the associated value too
+            " case |success(String)| " // I have selected the enum case, I should select the `case` keyword too
+            " |case success(String)| " // I have selected the whole enum case
         }
     )
 }
 
 // MARK: - Helper Functions
 
+/// Tests that a selection expands step by step through the expected states.
+///
+/// This helper function tests that when repeatedly expanding a selection, it progresses through
+/// each of the expected states in sequence. It takes an array of expected states and verifies
+/// that the first expansion matches the first state, then subsequent expansions match the remaining states.
+///
+/// - Parameters:
+///   - expectations: A closure returning an array of `TestInfo` representing the expected selection states
+///   - sourceLocation: The source location where this test is being called from, used for error reporting
 private func expect(
     @LineTestResultBuilder expandsStepByStep expectations: () -> [TestInfo],
     sourceLocation: SourceLocation = #_sourceLocation
@@ -381,15 +511,27 @@ private func expect(
     )
 }
 
+/// Tests that a selection expands through multiple expected states.
+///
+/// This helper function tests the expansion behavior in three phases:
+/// 1. Initial cases: Tests that multiple different initial selections all expand to the same first expected state
+/// 2. First expansion: Verifies that the initial selections expand to match this expected state
+/// 3. Subsequent expansions: Tests that further expansions match the sequence of expected states
+///
+/// - Parameters:
+///   - initialCases: A closure returning an array of String litterals representing different initial selection states to test
+///   - firstExpansion: A closure returning a String litteral representing the expected state after first expansion
+///   - subsequentExpansions: A closure returning an array of String litterals representing subsequent expected expansion states
+///   - sourceLocation: The source location where this test is being called from, used for error reporting
 private func expect(
     @LineTestResultBuilder eachInitialCase initialCases: () -> [TestInfo],
-    @LineTestResultBuilder expandsTo expectation1: () -> TestInfo,
-    @LineTestResultBuilder thenExpandsStepByStepTo expectations2: () -> [TestInfo] = { [] },
+    @LineTestResultBuilder expandsTo firstExpansion: () -> TestInfo,
+    @LineTestResultBuilder thenExpandsStepByStepTo subsequentExpansions: () -> [TestInfo] = { [] },
     sourceLocation: SourceLocation = #_sourceLocation
 ) {
     let initialCases = initialCases()
-    let initialExpandsTo = expectation1()
-    let thenExpandsStepByStep = expectations2()
+    let initialExpandsTo = firstExpansion()
+    let thenExpandsStepByStep = subsequentExpansions()
 
     // Test all initial cases
     for initialCase in initialCases {
@@ -400,7 +542,6 @@ private func expect(
         var mutableInitial = initial
         let result = mutableInitial.expandedSelection()
         let emoji = initialCase.skip ? "🐛" : result == expected ? " 😃" : " 👿"
-        print("\(emoji) \(result.rawDescription)")
         if !initialCase.skip, result != expected {
             Issue.record(
                 "Unexpected selection! Initial selection was `\(initial.rawDescription)`, expected selection was \(expected.rawDescription), but got `\(result.rawDescription)`",
@@ -423,7 +564,6 @@ private func expect(
         var mutableInitial = initial
         let result = mutableInitial.expandedSelection()
         let emoji = lineTest.skip ? "🐛" : result == expected ? " 😃" : " 👿"
-        print("\(emoji) \(result.rawDescription)")
         if !lineTest.skip, result != expected {
             Issue.record(
                 "Unexpected selection! Initial selection was `\(initial.rawDescription)`, expected selection was \(expected.rawDescription), but got `\(result.rawDescription)`",
