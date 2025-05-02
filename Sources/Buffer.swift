@@ -145,6 +145,19 @@ public struct Buffer: Equatable {
              }
         }
 
+        // Dictionary Context Check (NEW - Add this before others like String/Array)
+        if contextResult == nil {
+            // print("[expand S2] Attempting Dictionary Context expansion.")
+            if let dictExpansion = expandInDictionaryContext(selection) {
+                 if dictExpansion != selection { 
+                    // print("[expand] Stage 2 (Dictionary Context)")
+                    contextResult = dictExpansion
+                 } else {
+                    // print("[expand S2] Dictionary Context returned no change.")
+                 }
+            } // expandInDictionaryContext returns optional now
+        }
+
         // String Context Check (Only if no context found yet)
         if contextResult == nil {
             // print("[expand S2] Attempting String Context expansion.")
@@ -271,37 +284,54 @@ public struct Buffer: Equatable {
     }
     
     private func expandInStringContext(_ selection: Range<String.Index>) -> Range<String.Index> {
-        // Assumes word expansion (cursor->word, partial->word) was handled before this.
-        // This function handles: word -> content -> content+quotes
-        let quotes = tokens.filter { $0.kind == .quote }
-        guard let startQuote = quotes.first, let endQuote = quotes.last else {
-            return selection // Should not happen if called within string context check
+        // Find the nearest enclosing quotes for the current selection
+        let precedingQuotes = tokens.filter { $0.kind == .quote && $0.range.upperBound <= selection.lowerBound }.sorted { $0.range.lowerBound > $1.range.lowerBound }
+        let followingQuotes = tokens.filter { $0.kind == .quote && $0.range.lowerBound >= selection.upperBound }.sorted { $0.range.lowerBound < $1.range.lowerBound }
+
+        guard let startQuote = precedingQuotes.first, 
+              let endQuote = followingQuotes.first else {
+            // Cannot find enclosing quotes for this selection, maybe it spans across strings or isn't inside one
+            return selection
         }
+
+        // Define ranges based on the *closest* surrounding quotes
         let contentStart = startQuote.range.upperBound
         let contentEnd = endQuote.range.lowerBound
+        
+        // Ensure content range is valid (start before end)
+        guard contentStart <= contentEnd else { return selection }
         let contentRange = contentStart..<contentEnd
+        
+        // Ensure full range is valid
+        guard startQuote.range.lowerBound <= endQuote.range.upperBound else { return selection }
         let fullRange = startQuote.range.lowerBound..<endQuote.range.upperBound
 
-        // If selection is fully within content (could be one word, multiple words, or full content)
+        // --- Expansion Logic using localized ranges ---
+
+        // Stage 1: Selection is PART of the content -> Expand to FULL content (between these quotes)
+        // Check if selection is strictly within the content range defined by the closest quotes
         if selection.lowerBound >= contentStart && selection.upperBound <= contentEnd {
-             // If it IS the full content range -> expand to include quotes
-             if selection == contentRange {
-                 return fullRange // Content -> Content+Quotes
-             } else {
-                 // It's *part* of the content (e.g., a word that was just expanded from partial)
-                 // -> expand to full content range
-                 return contentRange // Word(s) -> Content
-             }
+            // If it's already the full content -> Expand to include quotes (Stage 2)
+            if selection == contentRange {
+                 // print("[strCtx] Content -> Full")
+                return fullRange
+            } else {
+                // It's part of the content -> Expand to the full content (between *these* quotes)
+                 // print("[strCtx] Partial Content -> Full Content")
+                return contentRange
+            }
         }
 
-        // If selection includes quotes or is already the full range
-        // Check bounds relative to the full range including quotes
+        // Stage 2: Selection is the FULL content (or already includes quotes) -> Expand/Remain at FULL range (with quotes)
+        // Check if selection is within the full range defined by closest quotes
         if selection.lowerBound >= startQuote.range.lowerBound && selection.upperBound <= endQuote.range.upperBound {
-            // If selection is already the max extent, return it. Otherwise expand to max.
-             return fullRange // Expand to/remain at Content+Quotes
+             // print("[strCtx] Already Full or Touching Quotes -> Full")
+            // If selection is already the max extent (fullRange), return it. Otherwise expand to max.
+            return fullRange
         }
 
-        // Fallback: Should ideally not be reached if checks in `expand` are correct.
+        // Fallback: Selection is outside the identified closest string bounds
+         // print("[strCtx] Fallback -> No Change")
         return selection
     }
     
@@ -997,6 +1027,196 @@ public struct Buffer: Equatable {
         }
         // print("[findMatchingBrace] Reached end without finding match for index \(startIndex).")
         return nil // No matching closing brace found
+    }
+
+    // Function to expand selection within a dictionary context
+    private func expandInDictionaryContext(_ selection: Range<String.Index>) -> Range<String.Index>? {
+        // let initialDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: selection, buffer: completeBuffer)]).rawDescription
+        // print("[dictCtx] Input: \(initialDesc)")
+
+        // 1. Find innermost enclosing brackets []
+        guard let (openBracket, closeBracket, contentRange) = findInnermostEnclosingPair(selection: selection, openChar: "[", closeChar: "]") else {
+            // print("[dictCtx] Did not find enclosing [] brackets.")
+            return nil // Not inside [] or selection prevents finding pair
+        }
+        let fullRange = openBracket.range.lowerBound..<closeBracket.range.upperBound
+        
+        // Basic Check: Is it likely a dictionary? Check for a colon within the content.
+        let innerTokens = tokens.filter { $0.range.lowerBound >= contentRange.lowerBound && $0.range.upperBound <= contentRange.upperBound }
+        guard innerTokens.contains(where: { $0.kind == .colon }) else {
+            // print("[dictCtx] No colon found inside [], likely an Array.")
+            return nil // Let Array context handle it
+        }
+        // print("[dictCtx] Found enclosing [] with a colon inside.")
+
+        // --- Expansion Stages --- 
+
+        // Stage 4: Selection is already the full range (including brackets)
+        if selection == fullRange {
+            // print("[dictCtx] Stage 4: Already full range -> No Change")
+            return selection
+        }
+
+        // Stage 3: Selection is the content range (all pairs) -> Expand to include brackets
+        if selection == contentRange {
+            // print("[dictCtx] Stage 3: Content selected -> Include Brackets")
+            return fullRange
+        }
+        
+        // --- Stages within the contentRange --- 
+        let pairsInfo = findDictionaryPairs(within: contentRange) // Helper needed
+        
+        // Find which pair(s) the selection overlaps
+        let overlappingPairs = pairsInfo.filter { 
+            ($0.keyRange.overlaps(selection) || $0.valueRange.overlaps(selection) || ($0.keyRange.upperBound == $0.valueRange.lowerBound && selection.contains($0.colonToken.range.lowerBound))) // Overlaps key, value, or colon
+        }
+        
+        if overlappingPairs.count == 1 {
+            let pair = overlappingPairs[0]
+            let fullPairRange = pair.keyRange.lowerBound..<pair.valueRange.upperBound
+
+            // Stage 2: Selection is the full pair -> Expand to all pairs (contentRange)
+            if selection == fullPairRange {
+                // print("[dictCtx] Stage 2: Full pair selected -> All Pairs Content")
+                 // Ensure there's actually content to expand to
+                 return contentRange.isEmpty ? selection : contentRange
+            }
+
+            // Stage 1: Selection is key OR value (but not full pair) -> Expand to full pair
+            let selectionIsKey = pair.keyRange.lowerBound <= selection.lowerBound && pair.keyRange.upperBound >= selection.upperBound
+            let selectionIsValue = pair.valueRange.lowerBound <= selection.lowerBound && pair.valueRange.upperBound >= selection.upperBound
+            let selectionIsColon = selection.contains(pair.colonToken.range.lowerBound) // Simple colon check
+            
+            // --- Modified Logic ---
+            if selectionIsValue && selection != fullPairRange {
+                // Check if the value itself is a quoted string by looking at its bounds
+                let valueText = completeBuffer[pair.valueRange]
+                if valueText.hasPrefix("\"") && valueText.hasSuffix("\"") && valueText.count >= 2 {
+                    // Value appears to be a string literal. Try string expansion first.
+                    let stringExpansion = expandInStringContext(selection)
+                    if stringExpansion != selection {
+                        // String context expanded (e.g., content -> content+quotes)
+                        // print("[dictCtx] Stage 1 (Value): Delegated to String Context -> Expanded")
+                        return stringExpansion
+                    }
+                    // String context didn't expand further (e.g., already content+quotes).
+                    // Fall through to expand to the full pair below.
+                    // print("[dictCtx] Stage 1 (Value): String Context no change, proceeding to Full Pair")
+                }
+                // If not a string or string expansion didn't change anything, expand Value -> Full Pair
+                // print("[dictCtx] Stage 1 (Value): Expanding -> Full Pair")
+                return fullPairRange
+
+            } else if (selectionIsKey || selectionIsColon) && selection != fullPairRange {
+                 if selectionIsKey {
+                     // Check if the key itself is a quoted string
+                     let keyText = completeBuffer[pair.keyRange]
+                     if keyText.hasPrefix("\"") && keyText.hasSuffix("\"") && keyText.count >= 2 {
+                         // Pass the full key range to string context if selection is inside it,
+                         // otherwise pass the selection itself.
+                         let rangeForStringContext = pair.keyRange.contains(selection.lowerBound) ? pair.keyRange : selection
+                         let stringExpansion = expandInStringContext(rangeForStringContext)
+
+                         if stringExpansion != selection {
+                             // String context expanded (e.g., content -> content+quotes)
+                             // print("[dictCtx] Stage 1 (Key): Delegated to String Context -> Expanded")
+                             return stringExpansion
+                         }
+                         // String context didn't expand further (e.g., selection was already content+quotes).
+                         // Proceed to check if we should expand to the full pair.
+                         // print("[dictCtx] Stage 1 (Key): String Context no change, proceeding to check Full Pair")
+                         // If the selection *after* string context check matches the full key range,
+                         // the next step is to expand to the full pair.
+                         if selection == pair.keyRange {
+                            // print("[dictCtx] Stage 1 (Key): Selection matches key range, expanding -> Full Pair")
+                             return fullPairRange
+                         }
+                         // Otherwise (e.g., string context did nothing on partial key), stay put for now.
+                         // Let the next expansion cycle handle it or fallback.
+                         // print("[dictCtx] Stage 1 (Key): String Context no change, selection != key range -> No Change Yet")
+                         return selection // Stay put
+                     }
+                      // If not a string, expand Key -> Full Pair
+                      // print("[dictCtx] Stage 1 (Key - Not String): Expanding -> Full Pair")
+                     return fullPairRange
+                 } else if selectionIsColon {
+                      // Colon still expands directly to full pair
+                      // print("[dictCtx] Stage 1 (Colon): Expanding -> Full Pair")
+                      return fullPairRange
+                 }
+                 // Should not be reached, but fallback
+                  return fullPairRange
+             }
+             // --- End Modified Logic ---
+            
+        } else if overlappingPairs.count > 1 {
+            // Selection spans multiple pairs -> Expand to all pairs (contentRange)
+            return contentRange.isEmpty ? selection : contentRange
+        } else if !contentRange.isEmpty {
+            // Selection is in whitespace/comma between pairs -> Expand to all pairs
+            return contentRange
+        }
+
+        // print("[dictCtx] No applicable expansion step found -> No Change")
+        return selection // Return current selection if no expansion rule applied *within* dict context
+    }
+    
+    // Helper to find dictionary key-value pairs within a range
+    private func findDictionaryPairs(within contentRange: Range<String.Index>) -> [(keyRange: Range<String.Index>, valueRange: Range<String.Index>, colonToken: Token)] {
+        guard !contentRange.isEmpty else { return [] }
+        var pairs: [(keyRange: Range<String.Index>, valueRange: Range<String.Index>, colonToken: Token)] = []
+        // Get tokens strictly within the content range, excluding whitespace and outer brackets
+        let relevantTokens = tokens.filter { 
+            $0.range.lowerBound >= contentRange.lowerBound && 
+            $0.range.upperBound <= contentRange.upperBound &&
+            $0.kind != .whitespace
+        }
+        
+        guard !relevantTokens.isEmpty else { return [] }
+
+        var currentPairStartIndex = 0
+        while currentPairStartIndex < relevantTokens.count {
+            // Find the colon for the current pair starting from currentPairStartIndex
+            guard let colonIndex = relevantTokens[currentPairStartIndex...].firstIndex(where: { $0.kind == .colon }) else {
+                 break // No more colons found in the remaining tokens
+            }
+            let colonToken = relevantTokens[colonIndex]
+
+            // --- Key Range Calculation ---
+            let keyStartIndex = currentPairStartIndex
+            let keyEndIndex = colonIndex - 1 // Index of the token just before the colon
+            guard keyStartIndex <= keyEndIndex else { break } // Should not happen if input is valid dict
+            let keyStartToken = relevantTokens[keyStartIndex]
+            let keyEndToken = relevantTokens[keyEndIndex]
+            let keyRange = keyStartToken.range.lowerBound..<keyEndToken.range.upperBound
+
+            // --- Value Range Calculation ---
+            let valueStartIndex = colonIndex + 1 // Index of the token just after the colon
+            guard valueStartIndex < relevantTokens.count else { break } // No tokens after colon
+
+            // Find the index of the next comma, starting search *after* the colon
+            let commaSearchStartIndex = valueStartIndex
+            let nextCommaIndex = relevantTokens[commaSearchStartIndex...].firstIndex(where: { $0.kind == .comma })
+
+            let valueEndIndex: Int
+            if let commaIndex = nextCommaIndex {
+                valueEndIndex = commaIndex - 1 // Value ends at token before the comma
+                currentPairStartIndex = commaIndex + 1 // Next pair starts after the comma
+            } else {
+                valueEndIndex = relevantTokens.endIndex - 1 // Value ends at the last relevant token
+                currentPairStartIndex = relevantTokens.endIndex // Stop iteration
+            }
+            
+            guard valueStartIndex <= valueEndIndex else { break } // No tokens for value (e.g., key: ,)
+            let valueStartToken = relevantTokens[valueStartIndex]
+            let valueEndToken = relevantTokens[valueEndIndex]
+            let valueRange = valueStartToken.range.lowerBound..<valueEndToken.range.upperBound
+
+            // Add the found pair
+            pairs.append((keyRange: keyRange, valueRange: valueRange, colonToken: colonToken))
+        }
+
+        return pairs
     }
 }
 

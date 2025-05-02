@@ -275,8 +275,8 @@ import Testing
     expect(
         expandsStepByStep: {
             #" ["key1": value1, "|key2": value2] "# // I'm at the start of a word, I should select the word
-            #" ["key1": value1, "|key2|": value2|] "# // I am at the edges of the string, I should select the quotes too
-            #" ["key1": value1, |"key2"|: value2|] "# // I have selected a key in a dictionary, I should select both the key and the value
+            #" ["key1": value1, "|key2|": value2] "# // I am at the edges of the string, I should select the quotes too
+            #" ["key1": value1, |"key2"|: value2] "# // I have selected a key in a dictionary, I should select both the key and the value
             #" ["key1": value1, |"key2": value2|] "# // I have selected a key/value pair in a dictionary, I should select every key/value pair in a dictionary
             #" [|"key1": value1, "key2": value2|] "# // I have selected every key/value pair in a dictionary, I should select the square brackets too
             #" |["key1": value1, "key2": value2]| "#
