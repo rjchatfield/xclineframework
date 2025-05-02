@@ -238,17 +238,82 @@ public struct Buffer: Equatable {
     }
     
     private func expandInFunctionContext(_ selection: Range<String.Index>) -> Range<String.Index> {
-        // Find the function name and parameters
-        let relevantTokens = tokens.filter { token in
-            token.range.overlaps(selection) || token.kind == .bracket
-        }
-        
-        guard let startToken = relevantTokens.first,
-              let endToken = relevantTokens.last else {
+        // 1. Find the innermost parentheses pair enclosing the selection.
+        guard let (openParen, closeParen, contentRange) = findInnermostEnclosingPair(selection: selection, openChar: "(", closeChar: ")") else {
+            // Selection might be on the function name itself or outside parentheses.
+            // Let other expansion logic handle this.
             return selection
         }
-        
-        return startToken.range.lowerBound..<endToken.range.upperBound
+        let fullRange = openParen.range.lowerBound..<closeParen.range.upperBound
+
+        // --- Expansion Stages within Parentheses ---
+
+        // Stage 4: Selection is already the full range (including parens)
+        if selection == fullRange {
+            return selection // Cannot expand further in this context
+        }
+
+        // Stage 3: Selection is the content range (all parameters) -> Expand to include parens
+        if selection == contentRange {
+            return fullRange
+        }
+
+        // --- Stages within the contentRange ---
+        // Check if selection is strictly within the content (not touching parens)
+        if selection.lowerBound >= contentRange.lowerBound && selection.upperBound <= contentRange.upperBound {
+            // Identify the parameter(s) the selection belongs to
+            let parameterRanges = findParameterRanges(within: contentRange) // Use helper
+
+            // Find which parameter range(s) the selection overlaps
+            let overlappingParams = parameterRanges.filter { $0.range.overlaps(selection) }
+
+            if overlappingParams.count == 1 {
+                let param = overlappingParams[0]
+                // Selection is within a single parameter
+
+                // Stage 2: Selection is the full parameter -> Expand to all parameters (contentRange)
+                if selection == param.range {
+                     // Ensure there's actually content to expand to, otherwise stay put
+                     return contentRange.isEmpty ? selection : contentRange
+                }
+
+                // Stage 1: Selection is part of the parameter (name/label or type) -> Expand to full parameter
+                // Find the range of the label/name part and the type part
+                if let (nameLabelRange, typeRange) = findParameterComponents(paramRange: param.range) {
+                     // Check if selection overlaps/equals name/label part or type part
+                     // Use precise check: selection must be fully contained within either part
+                    let selectionInName = nameLabelRange.lowerBound <= selection.lowerBound && nameLabelRange.upperBound >= selection.upperBound
+                    let selectionInType = typeRange.lowerBound <= selection.lowerBound && typeRange.upperBound >= selection.upperBound
+
+                    if selectionInName || selectionInType {
+                        // If selection matches name/label OR type -> expand to full parameter
+                        return param.range
+                    }
+                }
+                
+                // Fallback: If selection is within a param but not clearly name/type (e.g., colon, whitespace)
+                // -> expand to the full parameter range.
+                return param.range
+
+            } else if overlappingParams.count > 1 {
+                // Selection spans multiple parameters -> Expand to all parameters (contentRange)
+                 return contentRange.isEmpty ? selection : contentRange
+            } else if !contentRange.isEmpty {
+                 // Selection is in whitespace/comma between parameters -> Expand to all parameters
+                 return contentRange
+            }
+            // If contentRange is empty and selection isn't overlapping anything, return selection
+             return selection
+        }
+
+        // --- Selection touching or outside contentRange but within fullRange ---
+        // Example: Selecting just the open paren, or from outside into the first param.
+        // Generally, expand to include the full content.
+        if !contentRange.isEmpty {
+             return contentRange
+        }
+
+        return selection // Default fallback if nothing else matched
     }
     
     private func expandInArrayContext(_ selection: Range<String.Index>) -> Range<String.Index> {
@@ -409,6 +474,116 @@ public struct Buffer: Equatable {
 
         // Fallback: return selection if no expansion rule applied in root context
         return selection
+    }
+
+    // MARK: - Expansion Helpers
+
+    private func findInnermostEnclosingPair(selection: Range<String.Index>, openChar: Character, closeChar: Character) -> (open: Token, close: Token, content: Range<String.Index>)? {
+        let bracketTokens = tokens.filter { $0.kind == .bracket && ($0.value == String(openChar) || $0.value == String(closeChar)) }
+        var stack: [Token] = []
+        var pairs: [(open: Token, close: Token)] = []
+        
+        for token in bracketTokens {
+            if token.value == String(openChar) {
+                stack.append(token)
+            } else if token.value == String(closeChar), let open = stack.popLast() {
+                // Ensure the pair actually encloses the selection bounds
+                if open.range.lowerBound < selection.lowerBound && // Paren must be strictly before selection start
+                   token.range.upperBound > selection.upperBound { // Paren must be strictly after selection end
+                     pairs.append((open: open, close: token))
+                } else if open.range.lowerBound == selection.lowerBound && token.range.upperBound == selection.upperBound {
+                     // Handle case where selection *is* the brackets themselves maybe?
+                     // For now, focus on enclosure.
+                }
+            }
+        }
+
+        guard !pairs.isEmpty else { return nil }
+        
+        // Sort by span to find the smallest enclosing pair (innermost)
+        let sortedPairs = pairs.sorted {
+            completeBuffer.distance(from: $0.open.range.lowerBound, to: $0.close.range.upperBound) <
+            completeBuffer.distance(from: $1.open.range.lowerBound, to: $1.close.range.upperBound)
+        }
+        
+        guard let innermost = sortedPairs.first else { return nil }
+        let contentRange = innermost.open.range.upperBound..<innermost.close.range.lowerBound
+        return (innermost.open, innermost.close, contentRange)
+    }
+
+    struct ParameterInfo {
+         let range: Range<String.Index>
+    }
+
+    private func findParameterRanges(within contentRange: Range<String.Index>) -> [ParameterInfo] {
+        guard !contentRange.isEmpty else { return [] }
+        var parameterRanges: [ParameterInfo] = []
+        // Get tokens strictly within the content range, excluding outer brackets
+        let relevantTokens = tokens.filter { $0.range.lowerBound >= contentRange.lowerBound && $0.range.upperBound <= contentRange.upperBound }
+        guard !relevantTokens.isEmpty else { return [] }
+
+        var currentParamStart = contentRange.lowerBound // Start from the beginning of content range
+        var searchStart = 0 // Index within relevantTokens
+
+        for i in searchStart..<relevantTokens.count {
+            let token = relevantTokens[i]
+            if token.kind == .comma {
+                let paramEnd = token.range.lowerBound // End just before comma
+                // Trim trailing whitespace from paramEnd backwards
+                 let trimmedEnd = completeBuffer.rangeOfCharacter(from: CharacterSet.whitespacesAndNewlines.inverted, options: .backwards, range: currentParamStart..<paramEnd)?.upperBound ?? currentParamStart // Use currentParamStart if only whitespace
+
+                if currentParamStart < trimmedEnd { // Avoid adding empty ranges
+                     parameterRanges.append(ParameterInfo(range: currentParamStart..<trimmedEnd))
+                }
+
+                // Start next parameter after comma, trimming leading whitespace
+                let nextParamStartIndex = token.range.upperBound
+                currentParamStart = completeBuffer.rangeOfCharacter(from: CharacterSet.whitespacesAndNewlines.inverted, options: [], range: nextParamStartIndex..<contentRange.upperBound)?.lowerBound ?? contentRange.upperBound // Use end if only whitespace remains
+                searchStart = i + 1
+            }
+        }
+        
+        // Add the last parameter (from last comma or start, up to the end of contentRange)
+        let lastParamEnd = contentRange.upperBound
+        // Trim trailing whitespace from the end of the *entire* content range potentially? No, just for the last param.
+        let trimmedLastEnd = completeBuffer.rangeOfCharacter(from: CharacterSet.whitespacesAndNewlines.inverted, options: .backwards, range: currentParamStart..<lastParamEnd)?.upperBound ?? currentParamStart
+
+        if currentParamStart < trimmedLastEnd { // Avoid adding empty range if trailing comma or only whitespace
+            parameterRanges.append(ParameterInfo(range: currentParamStart..<trimmedLastEnd))
+        }
+
+        return parameterRanges
+    }
+
+    private func findParameterComponents(paramRange: Range<String.Index>) -> (nameLabel: Range<String.Index>, type: Range<String.Index>)? {
+        let paramTokens = tokens.filter { paramRange.overlaps($0.range) && $0.range.lowerBound >= paramRange.lowerBound && $0.range.upperBound <= paramRange.upperBound } // Tokens strictly within the param range
+         guard let colonToken = paramTokens.first(where: { $0.kind == .colon }) else {
+             // No colon found. Could be a closure parameter name without type?
+             // If there's just one word, assume it's the name/label part? Risky.
+             // For robust parameter handling, assume colon is needed to separate.
+             return nil
+         }
+
+         // Everything from start of param range up to colon is name/label part
+         let nameLabelEnd = colonToken.range.lowerBound
+         // Trim trailing whitespace from name/label part
+         let trimmedNameLabelEnd = completeBuffer.rangeOfCharacter(from: CharacterSet.whitespacesAndNewlines.inverted, options: .backwards, range: paramRange.lowerBound..<nameLabelEnd)?.upperBound ?? paramRange.lowerBound // Use start if only whitespace
+         let nameLabelRange = paramRange.lowerBound..<trimmedNameLabelEnd
+
+         // Everything from after colon to end of param range is type part
+         let typeStart = colonToken.range.upperBound
+         // Trim leading whitespace from type part
+         let trimmedTypeStart = completeBuffer.rangeOfCharacter(from: CharacterSet.whitespacesAndNewlines.inverted, options: [], range: typeStart..<paramRange.upperBound)?.lowerBound ?? paramRange.upperBound // Use end if only whitespace
+         let typeRange = trimmedTypeStart..<paramRange.upperBound
+
+         // Ensure components are not empty after trimming
+         guard nameLabelRange.lowerBound < nameLabelRange.upperBound, typeRange.lowerBound < typeRange.upperBound else { return nil }
+
+         return (nameLabelRange, typeRange)
+    }
+
+    private func tokens(in range: Range<String.Index>) -> [Token] {
+         tokens.filter { range.overlaps($0.range) }
     }
 }
 
