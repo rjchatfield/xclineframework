@@ -76,39 +76,71 @@ public struct Buffer: Equatable {
     // MARK: - Private Expansion Logic
     
     private func expand(selection: Range<String.Index>) -> Range<String.Index> {
-        // 1) Cursor expands to nearest word
+        // --- Stage 0: Cursor Expansion ---
         if selection.lowerBound == selection.upperBound {
+            // Find the word associated with the cursor using root context logic
+            // expandInRootContext handles finding the appropriate word or returning selection
             return expandInRootContext(selection)
         }
 
-        // 2) If inside a quoted string, do string expansion first
+        // --- Stage 1: Partial Word Expansion ---
+        // Check if the current selection is strictly contained within a single word token
+        if let containingWord = tokens.first(where: { $0.kind == .word &&
+                                                 $0.range.lowerBound <= selection.lowerBound &&
+                                                 $0.range.upperBound >= selection.upperBound }) {
+             // If the selection is smaller than the containing word, expand to the word boundaries
+             if selection != containingWord.range {
+                 return containingWord.range // Expand partial word -> full word
+             }
+             // If selection IS the full word, proceed to context expansion below
+        }
+
+        // --- Stage 2: Context-Specific Expansion (String, Array, etc.) ---
+        // Now that we handle partial->full word expansion first, we can check contexts.
+
+        // String Context Check
         let quoteTokens = tokens.filter { $0.kind == .quote }
         if let startQuote = quoteTokens.first, let endQuote = quoteTokens.last {
-            let fullRange = startQuote.range.lowerBound..<endQuote.range.upperBound
-            if selection.lowerBound >= fullRange.lowerBound && selection.upperBound <= fullRange.upperBound {
-                return expandInStringContext(selection)
+            let fullStringRangeIncludingQuotes = startQuote.range.lowerBound..<endQuote.range.upperBound
+            // Check if the *current* selection is within the string bounds (content or quotes)
+            if selection.lowerBound >= startQuote.range.lowerBound && selection.upperBound <= endQuote.range.upperBound {
+                 // Delegate to string context logic, which now handles word->content->quotes
+                 let stringExpansion = expandInStringContext(selection)
+                 // Only return if it actually expanded
+                 if stringExpansion != selection { return stringExpansion }
+                 // If string logic didn't expand (e.g., already at max), fall through
             }
         }
 
-        // 2.1) If inside an array, apply multi-stage array expansion
-        let arrayExpanded = expandInArrayContext(selection)
-        if arrayExpanded.lowerBound != selection.lowerBound || arrayExpanded.upperBound != selection.upperBound {
-            return arrayExpanded
-        }
+        // Array Context Check
+        let arrayExpansion = expandInArrayContext(selection)
+        if arrayExpansion != selection { return arrayExpansion }
 
-        // 3) Find tokens that overlap with the selection
-        let overlappingTokens = tokens.filter { token in
-            token.range.overlaps(selection)
+        // Function Context Check (Assuming expandInFunctionContext returns selection if no expansion)
+        let functionExpansion = expandInFunctionContext(selection)
+        if functionExpansion != selection { return functionExpansion }
+
+        // Closure Context Check
+        let closureExpansion = expandInClosureContext(selection)
+        if closureExpansion != selection { return closureExpansion }
+
+        // Generic Context Check
+        let genericExpansion = expandInGenericContext(selection)
+        if genericExpansion != selection { return genericExpansion }
+
+        // --- Stage 3: Fallback Root Context Expansion ---
+        // If no specific context applied or expanded, try root logic again.
+        // This might handle cases like selecting across different token types not in a specific context.
+        let rootExpansion = expandInRootContext(selection)
+        if rootExpansion != selection { return rootExpansion }
+
+        // Final fallback: nearest token if absolutely nothing else expanded
+        // Avoid calling findNearestToken if rootExpansion already returned selection
+        if rootExpansion == selection {
+             return findNearestToken(for: selection)
+        } else {
+             return rootExpansion // Should be selection if no expansion happened in root context
         }
-        
-        guard !overlappingTokens.isEmpty else {
-            // If no tokens overlap, find the nearest token
-            return findNearestToken(for: selection)
-        }
-        
-        // 4) Delegate to context-specific expansion
-        let context = determineContext(for: overlappingTokens)
-        return expandInContext(context, selection: selection)
     }
     
     private func findNearestToken(for selection: Range<String.Index>) -> Range<String.Index> {
@@ -171,26 +203,38 @@ public struct Buffer: Equatable {
     }
     
     private func expandInStringContext(_ selection: Range<String.Index>) -> Range<String.Index> {
-        // Multi-stage string expansion: word/partial -> full content -> include quotes
+        // Assumes word expansion (cursor->word, partial->word) was handled before this.
+        // This function handles: word -> content -> content+quotes
         let quotes = tokens.filter { $0.kind == .quote }
         guard let startQuote = quotes.first, let endQuote = quotes.last else {
-            return selection
+            return selection // Should not happen if called within string context check
         }
         let contentStart = startQuote.range.upperBound
         let contentEnd = endQuote.range.lowerBound
         let contentRange = contentStart..<contentEnd
         let fullRange = startQuote.range.lowerBound..<endQuote.range.upperBound
-        
-        // stage 1: inside content -> expand to content
+
+        // If selection is fully within content (could be one word, multiple words, or full content)
         if selection.lowerBound >= contentStart && selection.upperBound <= contentEnd {
-            // if content fully selected -> include quotes
-            if selection == contentRange {
-                return fullRange
-            }
-            return contentRange
+             // If it IS the full content range -> expand to include quotes
+             if selection == contentRange {
+                 return fullRange // Content -> Content+Quotes
+             } else {
+                 // It's *part* of the content (e.g., a word that was just expanded from partial)
+                 // -> expand to full content range
+                 return contentRange // Word(s) -> Content
+             }
         }
-        // stage 2: include quotes
-        return fullRange
+
+        // If selection includes quotes or is already the full range
+        // Check bounds relative to the full range including quotes
+        if selection.lowerBound >= startQuote.range.lowerBound && selection.upperBound <= endQuote.range.upperBound {
+            // If selection is already the max extent, return it. Otherwise expand to max.
+             return fullRange // Expand to/remain at Content+Quotes
+        }
+
+        // Fallback: Should ideally not be reached if checks in `expand` are correct.
+        return selection
     }
     
     private func expandInFunctionContext(_ selection: Range<String.Index>) -> Range<String.Index> {
@@ -280,32 +324,90 @@ public struct Buffer: Equatable {
     }
     
     private func expandInRootContext(_ selection: Range<String.Index>) -> Range<String.Index> {
-        // Cursor inside or at boundary of word: expand to that word
+        // --- Cursor Expansion ---
         if selection.lowerBound == selection.upperBound {
-            if let wordToken = tokens.first(where: { $0.kind == .word && ($0.range.contains(selection.lowerBound) || $0.range.upperBound == selection.lowerBound) }) {
-                return wordToken.range
+            // Find word containing or immediately following cursor
+            if let wordToken = tokens.first(where: { $0.kind == .word && ($0.range.contains(selection.lowerBound) || $0.range.upperBound == selection.lowerBound || $0.range.lowerBound == selection.lowerBound) }) {
+                 // Added lowerBound check for cursor at start of word
+                 return wordToken.range
             }
+            // If cursor not in/near word, maybe expand to adjacent non-whitespace token?
+            // For now, let later logic handle it or return selection.
+             return selection // Return cursor if no word found nearby
         }
-        // 1. Find all word tokens that overlap the selection
+
+        // --- Range Expansion ---
+        // If selection is a range:
+
+        // Priority 1: Fully Contained Word
+        // Find the smallest word token that *fully contains* the selection.
+        if let containingWord = tokens.filter({ $0.kind == .word && $0.range.lowerBound <= selection.lowerBound && $0.range.upperBound >= selection.upperBound }).min(by: { completeBuffer.distance(from: $0.range.lowerBound, to: $0.range.upperBound) < completeBuffer.distance(from: $1.range.lowerBound, to: $1.range.upperBound) }) {
+             // Expand selection to the bounds of the word it's inside
+             // Note: The main `expand` function already handles partial->full word expansion in Stage 1.
+             // This check might be redundant here or could handle edge cases.
+             // Let's keep it simple: If it's contained, we probably want the word itself.
+             return containingWord.range
+        }
+
+        // Priority 2: Overlapping Words
+        // Find word tokens that overlap the selection.
         let overlappingWords = tokens.filter { token in
             token.kind == .word && token.range.overlaps(selection)
         }
-        if let wordToken = overlappingWords.min(by: { $0.range.lowerBound < $1.range.lowerBound }) {
-            return wordToken.range
+
+        // If selection overlaps exactly one word, expand to that word's bounds.
+        if overlappingWords.count == 1 {
+             // Check if the selection is *smaller* than the word - if so, Stage 1 in `expand` handles it.
+             // If selection >= word range, maybe expand outwards?
+             // Let's return the word range for simplicity if it overlaps just one.
+            return overlappingWords[0].range
         }
-        // 2. If selection is in whitespace, expand to the next word to the right
-        if let wordToken = tokens.first(where: { token in
+        // If selection overlaps multiple words, expand to union of those words?
+        if overlappingWords.count > 1 {
+             if let firstWord = overlappingWords.min(by: { $0.range.lowerBound < $1.range.lowerBound }),
+                let lastWord = overlappingWords.max(by: { $0.range.upperBound < $1.range.upperBound }) {
+                 return firstWord.range.lowerBound..<lastWord.range.upperBound
+             }
+        }
+
+
+        // Priority 3: Adjacent Word (if selection is in whitespace/non-word)
+        // Find the nearest word to the right
+        if let nextWord = tokens.first(where: { token in
             token.kind == .word && token.range.lowerBound >= selection.upperBound
         }) {
-            return wordToken.range
+            // Check distance? Only expand if adjacent?
+            if let precedingToken = tokens.last(where: { $0.range.upperBound <= selection.lowerBound }), precedingToken.range.upperBound == selection.lowerBound {
+                 // Selection might start right after a token. Check what's between selection end and next word.
+                 let gap = completeBuffer[selection.upperBound..<nextWord.range.lowerBound]
+                 if gap.allSatisfy({ $0.isWhitespace }) {
+                      // Expand selection in whitespace to the next word
+                      // return nextWord.range // Option 1: Just the word
+                      return selection.lowerBound..<nextWord.range.upperBound // Option 2: Include whitespace + word
+                 }
+            } else if selection.upperBound == nextWord.range.lowerBound { // Directly adjacent
+                  return selection.lowerBound..<nextWord.range.upperBound // Include word
+            }
+             // If not clearly adjacent whitespace, don't expand yet.
         }
-        // 3. If at the end, expand to the last word to the left
-        if let wordToken = tokens.reversed().first(where: { token in
-            token.kind == .word && token.range.upperBound <= selection.lowerBound
-        }) {
-            return wordToken.range
-        }
-        // Fallback: return selection
+
+        // Find the nearest word to the left
+         if let prevWord = tokens.reversed().first(where: { token in
+             token.kind == .word && token.range.upperBound <= selection.lowerBound
+         }) {
+             if let followingToken = tokens.first(where: { $0.range.lowerBound >= selection.upperBound }), followingToken.range.lowerBound == selection.upperBound {
+                  let gap = completeBuffer[prevWord.range.upperBound..<selection.lowerBound]
+                  if gap.allSatisfy({ $0.isWhitespace }) {
+                       // return prevWord.range // Option 1
+                       return prevWord.range.lowerBound..<selection.upperBound // Option 2: Include word + whitespace
+                  }
+             } else if selection.lowerBound == prevWord.range.upperBound { // Directly adjacent
+                  return prevWord.range.lowerBound..<selection.upperBound // Include word
+             }
+              // If not clearly adjacent whitespace, don't expand yet.
+         }
+
+        // Fallback: return selection if no expansion rule applied in root context
         return selection
     }
 }
