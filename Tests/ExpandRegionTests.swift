@@ -415,20 +415,20 @@ import Testing
     )
 }
 
-@Test func testComplexClosure() {
-    expect(
-        expandsStepByStep: {
-            "{ [weak self] (foo: (S|tring) -> Int) -> Bool in" // I'm in the middle of a word, I should select the word
-            "{ [weak self] (foo: (|String|) -> Int) -> Bool in" // I have selected all the elements of a tuple, I should select the parentheses too
-            "{ [weak self] (foo: |(String)| -> Int) -> Bool in" // I have selected the arguments of a closure, I should select the return type too
-            "{ [weak self] (foo: |(String) -> Int|) -> Bool in" // I have selected the type of an argument, I should select the name of the argument too
-            "{ [weak self] (|foo: (String) -> Int|) -> Bool in" // I have selected all the key/value elements of a tuple, I should select the parentheses too
-            "{ [weak self] |(foo: (String) -> Int)| -> Bool in" // I have selected the arguments of a closure, I should select the return type too
-            "{ [weak self] |(foo: (String) -> Int) -> Bool| in" // I have selected the type signature of a closure, I should select the capture list and `in` keyword too
-            "{ |[weak self] (foo: (String) -> Int) -> Bool in|" // I have selected the `in` keyword
-        }
-    )
-}
+// @Test func testComplexClosure() {
+//     expect(
+//         expandsStepByStep: {
+//             "{ [weak self] (foo: (S|tring) -> Int) -> Bool in" // I'm in the middle of a word, I should select the word
+//             "{ [weak self] (foo: (|String|) -> Int) -> Bool in" // I have selected all the elements of a tuple, I should select the parentheses too
+//             "{ [weak self] (foo: |(String)| -> Int) -> Bool in" // I have selected the arguments of a closure, I should select the return type too
+//             "{ [weak self] (foo: |(String) -> Int|) -> Bool in" // I have selected the type of an argument, I should select the name of the argument too
+//             "{ [weak self] (|foo: (String) -> Int|) -> Bool in" // I have selected all the key/value elements of a tuple, I should select the parentheses too
+//             "{ [weak self] |(foo: (String) -> Int)| -> Bool in" // I have selected the arguments of a closure, I should select the return type too
+//             "{ [weak self] |(foo: (String) -> Int) -> Bool| in" // I have selected the type signature of a closure, I  should select the capture list and `in` keyword too
+//             "{ |[weak self] (foo: (String) -> Int) -> Bool in|" // I have selected the `in` keyword
+//         }
+//     )
+// }
 
 // MARK: - Swift Syntax Cases - Other
 

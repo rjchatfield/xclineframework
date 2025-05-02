@@ -12,6 +12,7 @@ public struct Token: Equatable {
         case colon
         case dot
         case optionalDot
+        case arrow
         case whitespace
         case other
     }

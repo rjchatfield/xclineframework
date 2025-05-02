@@ -76,13 +76,13 @@ public struct Buffer: Equatable {
     // MARK: - Private Expansion Logic
     
     private func expand(selection: Range<String.Index>) -> Range<String.Index> {
-        let initialDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: selection, buffer: completeBuffer)]).rawDescription
-        print("[expand] Input: \(initialDesc)")
+        // let initialDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: selection, buffer: completeBuffer)]).rawDescription
+        // print("[expand] Input: \(initialDesc)")
         // --- Stage 0: Cursor Expansion ---
         if selection.lowerBound == selection.upperBound {
             let result = expandInRootContext(selection)
-            let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: result, buffer: completeBuffer)]).rawDescription
-            print("[expand] Stage 0 (Cursor) -> \(resultDesc)")
+            // let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: result, buffer: completeBuffer)]).rawDescription
+            // print("[expand] Stage 0 (Cursor) -> \(resultDesc)")
             return result
         }
 
@@ -91,8 +91,8 @@ public struct Buffer: Equatable {
                                                  $0.range.lowerBound <= selection.lowerBound &&
                                                  $0.range.upperBound >= selection.upperBound }) {
              if selection != containingWord.range {
-                let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: containingWord.range, buffer: completeBuffer)]).rawDescription
-                print("[expand] Stage 1 (Partial Word) -> \(resultDesc)")
+                // let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: containingWord.range, buffer: completeBuffer)]).rawDescription
+                // print("[expand] Stage 1 (Partial Word) -> \(resultDesc)")
                  return containingWord.range // Expand partial word -> full word
              }
         }
@@ -100,75 +100,117 @@ public struct Buffer: Equatable {
         // --- Stage 1.5: Chain Expansion ---
         let chainExpansion = expandChainBackward(selection)
         if chainExpansion != selection {
-            let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: chainExpansion, buffer: completeBuffer)]).rawDescription
-            print("[expand] Stage 1.5 (Chain) -> \(resultDesc)")
+            // let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: chainExpansion, buffer: completeBuffer)]).rawDescription
+            // print("[expand] Stage 1.5 (Chain) -> \(resultDesc)")
             return chainExpansion // Return if chain expansion occurred
         }
 
         // --- Stage 2: Context-Specific Expansion (String, Array, etc.) ---
         var contextResult: Range<String.Index>? = nil
-        // String Context Check
-        let quoteTokens = tokens.filter { $0.kind == .quote }
-        if let startQuote = quoteTokens.first, let endQuote = quoteTokens.last {
-            if selection.lowerBound >= startQuote.range.lowerBound && selection.upperBound <= endQuote.range.upperBound {
-                 let stringExpansion = expandInStringContext(selection)
-                 if stringExpansion != selection { 
-                    print("[expand] Stage 2 (String Context)")
-                    contextResult = stringExpansion
-                 }
+        var isPotentiallyInClosureSignature = false
+        // print("[expand S2] Checking for potential closure signature...")
+        
+        // New check: Find nearest preceding '{' and subsequent 'in' or '}'
+        if let openBraceIndex = tokens.lastIndex(where: { $0.kind == .bracket && $0.value == "{" && $0.range.lowerBound <= selection.lowerBound }) {
+            let openBrace = tokens[openBraceIndex]
+            if let endSignatureTokenIndex = tokens.firstIndex(where: {
+                ($0.kind == .word && $0.value == "in" || $0.kind == .bracket && $0.value == "}")
+                && $0.range.lowerBound >= selection.lowerBound
+                && $0.range.lowerBound > openBrace.range.lowerBound // Ensure after the found open brace
+            }) {
+                let endSignatureToken = tokens[endSignatureTokenIndex]
+                // Selection ends before or at the start of the 'in'/'}'?
+                if selection.upperBound <= endSignatureToken.range.lowerBound {
+                    // print("[expand S2] Found preceding { and subsequent in/}. Potential closure signature.")
+                    isPotentiallyInClosureSignature = true
+                } else {
+                    // print("[expand S2] Found { and in/}, but selection extends beyond 'in'. Not signature.")
+                }
+            } else {
+                // print("[expand S2] Found preceding {, but no subsequent 'in' or '}'.")
             }
+        } else {
+            // print("[expand S2] No preceding { found.")
+        }
+
+        // Try Closure Context FIRST if applicable
+        if isPotentiallyInClosureSignature {
+            // print("[expand S2] Attempting Closure Context expansion.")
+             let closureExpansion = expandInClosureContext(selection)
+             if closureExpansion != selection { 
+                // print("[expand S2] Closure Context DID expand.")
+                  contextResult = closureExpansion
+             } else {
+                // print("[expand S2] Closure Context returned no change.")
+             }
+        }
+
+        // String Context Check (Only if no context found yet)
+        if contextResult == nil {
+            // print("[expand S2] Attempting String Context expansion.")
+             let quoteTokens = tokens.filter { $0.kind == .quote }
+             if let startQuote = quoteTokens.first, let endQuote = quoteTokens.last {
+                 if selection.lowerBound >= startQuote.range.lowerBound && selection.upperBound <= endQuote.range.upperBound {
+                      let stringExpansion = expandInStringContext(selection)
+                      if stringExpansion != selection { 
+                        // print("[expand] Stage 2 (String Context)")
+                         contextResult = stringExpansion
+                      }
+                 }
+             }
         }
         // Array Context Check (Only if no context found yet)
         if contextResult == nil {
+            // print("[expand S2] Attempting Array Context expansion.")
              let arrayExpansion = expandInArrayContext(selection)
              if arrayExpansion != selection { 
-                  print("[expand] Stage 2 (Array Context)")
+                // print("[expand] Stage 2 (Array Context)")
                   contextResult = arrayExpansion
              }
         }
-        // Function Context Check (Only if no context found yet)
-        if contextResult == nil {
+        // Function Context Check (Only if no context found yet AND *not* in a closure signature)
+        if contextResult == nil && !isPotentiallyInClosureSignature {
+            // print("[expand S2] Attempting Function Context expansion.")
              let functionExpansion = expandInFunctionContext(selection)
              if functionExpansion != selection { 
-                  print("[expand] Stage 2 (Function Context)")
+                // print("[expand] Stage 2 (Function Context)")
                   contextResult = functionExpansion
              }
+        } else if contextResult == nil && isPotentiallyInClosureSignature {
+            // print("[expand S2] Skipping Function Context check because potential closure signature found.")
         }
-        // Closure Context Check (Only if no context found yet)
+        // Generic Context Check (Only if no context found yet)
          if contextResult == nil {
-              let closureExpansion = expandInClosureContext(selection)
-              if closureExpansion != selection { 
-                   print("[expand] Stage 2 (Closure Context)")
-                   contextResult = closureExpansion
-              }
-         }
-         // Generic Context Check (Only if no context found yet)
-         if contextResult == nil {
+            // print("[expand S2] Attempting Generic Context expansion.")
               let genericExpansion = expandInGenericContext(selection)
               if genericExpansion != selection { 
-                   print("[expand] Stage 2 (Generic Context)")
+                // print("[expand] Stage 2 (Generic Context)")
                    contextResult = genericExpansion
               }
          }
+         
+        // If no specific context handled it, *maybe* try Closure again for simple { } cases?
+        // No, let root context handle simple block expansion if needed.
+
         // Return if context expansion happened
         if let contextResult = contextResult {
-             let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: contextResult, buffer: completeBuffer)]).rawDescription
-             print("[expand] Stage 2 -> \(resultDesc)")
+            // let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: contextResult, buffer: completeBuffer)]).rawDescription
+            // print("[expand] Stage 2 -> \(resultDesc)")
              return contextResult
         }
 
         // --- Stage 2.5: Base Type Expansion ---
         if let baseTypeExpansion = expandBaseTypeIfGenericSelected(selection) {
-             let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: baseTypeExpansion, buffer: completeBuffer)]).rawDescription
-             print("[expand] Stage 2.5 (Base Type) -> \(resultDesc)")
+            // let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: baseTypeExpansion, buffer: completeBuffer)]).rawDescription
+            // print("[expand] Stage 2.5 (Base Type) -> \(resultDesc)")
              return baseTypeExpansion
         }
 
         // --- Stage 3: Fallback Root Context Expansion ---
         let rootExpansion = expandInRootContext(selection)
         if rootExpansion != selection { 
-             let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: rootExpansion, buffer: completeBuffer)]).rawDescription
-             print("[expand] Stage 3 (Root Fallback) -> \(resultDesc)")
+            // let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: rootExpansion, buffer: completeBuffer)]).rawDescription
+            // print("[expand] Stage 3 (Root Fallback) -> \(resultDesc)")
              return rootExpansion
         }
 
@@ -176,8 +218,8 @@ public struct Buffer: Equatable {
         if rootExpansion == selection {
              let nearest = findNearestToken(for: selection)
              if nearest != selection {
-                  let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: nearest, buffer: completeBuffer)]).rawDescription
-                  print("[expand] Stage 4 (Nearest Token) -> \(resultDesc)")
+                // let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: nearest, buffer: completeBuffer)]).rawDescription
+                // print("[expand] Stage 4 (Nearest Token) -> \(resultDesc)")
              }
              return nearest == selection ? selection : nearest
         } else {
@@ -393,14 +435,171 @@ public struct Buffer: Equatable {
     }
     
     private func expandInClosureContext(_ selection: Range<String.Index>) -> Range<String.Index> {
-        // Find the closure braces
-        let braces = tokens.filter { $0.kind == .bracket && ($0.value == "{" || $0.value == "}") }
-        guard let startBrace = braces.first(where: { $0.range.lowerBound <= selection.lowerBound }),
-              let endBrace = braces.last(where: { $0.range.upperBound >= selection.upperBound }) else {
+        // Hybrid approach: Add back intermediate steps
+        // print("[closureCtx] Running Hybrid Logic")
+
+        // 1. Find preceding {
+        guard let openBraceIndex = tokens.lastIndex(where: { $0.kind == .bracket && $0.value == "{" && $0.range.lowerBound <= selection.lowerBound }),
+              let openBrace = Optional(tokens[openBraceIndex])
+        else {
+            // print("[closureCtx] Hybrid: Cannot find preceding {")
+            return selection
+        }
+
+        // 2. Find subsequent 'in' keyword 
+        guard let inTokenIndex = tokens.firstIndex(where: { $0.kind == .word && $0.value == "in" && $0.range.lowerBound >= selection.lowerBound }),
+              let inToken = Optional(tokens[inTokenIndex])
+        else {
+            // print("[closureCtx] Hybrid: Cannot find subsequent 'in' keyword")
             return selection
         }
         
-        return startBrace.range.lowerBound..<endBrace.range.upperBound
+        // 3. Identify Signature Components
+        let signatureEnd = inToken.range.lowerBound
+        let signatureTokens = tokens.filter { $0.range.lowerBound >= openBrace.range.upperBound && $0.range.upperBound <= signatureEnd }
+        
+        let paramSearchRange = openBrace.range.upperBound..<signatureEnd
+        var parameterParenthesesRange: Range<String.Index>? = nil
+        var parametersContentRange: Range<String.Index>? = nil
+        var parameterRanges: [ParameterInfo] = []
+        var returnTypeRange: Range<String.Index>? = nil
+        var arrowToken: Token? = nil
+
+        // Find arrow token
+        arrowToken = signatureTokens.first(where: { $0.kind == .arrow })
+
+        // Find Parameter tokens (before arrow or end)
+        let paramEndBoundary = arrowToken?.range.lowerBound ?? signatureEnd
+        let paramTokens = signatureTokens.filter { $0.range.upperBound <= paramEndBoundary }
+
+        if let openParen = paramTokens.first(where: { $0.kind == .bracket && $0.value == "(" }),
+           let openParenIndex = paramTokens.firstIndex(of: openParen),
+           let closeParen = findMatchingBrace(startIndex: openParenIndex, tokens: paramTokens), 
+           let closeParenIndex = paramTokens.firstIndex(of: closeParen),
+           closeParenIndex > openParenIndex {
+            parameterParenthesesRange = openParen.range.lowerBound..<closeParen.range.upperBound
+            parametersContentRange = openParen.range.upperBound..<closeParen.range.lowerBound
+             if let content = parametersContentRange, !content.isEmpty {
+                 parameterRanges = findParameterRanges(within: content)
+             }
+        } else {
+             let effectiveParamSearchRange = openBrace.range.upperBound..<paramEndBoundary
+             if !effectiveParamSearchRange.isEmpty {
+                 parametersContentRange = effectiveParamSearchRange
+                 parameterRanges = findParameterRanges(within: effectiveParamSearchRange)
+             }
+        }
+
+        // Find Return Type Range (after arrow, before in)
+        if let arrow = arrowToken {
+             let returnStart = arrow.range.upperBound
+             let returnEnd = signatureEnd
+             let potentialReturnRange = returnStart..<returnEnd
+             // Trim whitespace (optional but good)
+             if let trimmedStart = completeBuffer.rangeOfCharacter(from: .whitespacesAndNewlines.inverted, options: [], range: potentialReturnRange)?.lowerBound,
+                let trimmedEnd = completeBuffer.rangeOfCharacter(from: .whitespacesAndNewlines.inverted, options: .backwards, range: potentialReturnRange)?.upperBound,
+                trimmedStart < trimmedEnd {
+                 returnTypeRange = trimmedStart..<trimmedEnd
+             }
+        }
+        
+        // Determine the full range covered by parameters (incl. parens if they exist)
+        let fullParameterSectionRange = parameterParenthesesRange ?? parametersContentRange
+
+        // --- Expansion Logic ---
+
+        // STEP 1: Name/Type -> Full Parameter 
+        var step1Applied = false
+        var selectedFullParameterOnlyName = false // Track if selection matches a name-only param
+        for param in parameterRanges {
+             let components = findParameterComponents(paramRange: param.range)
+             
+             if let (nameLabelRange, typeRange) = components {
+                 let selectionInName = nameLabelRange.overlaps(selection) && !(selection.lowerBound < nameLabelRange.lowerBound || selection.upperBound > nameLabelRange.upperBound)
+                 let selectionInType = typeRange.overlaps(selection) && !(selection.lowerBound < typeRange.lowerBound || selection.upperBound > typeRange.upperBound)
+
+                 if (selectionInName || selectionInType) && selection != param.range {
+                    // print("[closureCtx] Hybrid Step 1: Name/Type -> Full Param")
+                     step1Applied = true
+                     return param.range
+                 }
+             } else if param.range == selection { 
+                 // Check explicitly if components were nil (meaning only name was found)
+                 if components == nil {
+                    // print("[closureCtx] Hybrid Step 1: Detected selection matches name-only param: \(param.range)")
+                    selectedFullParameterOnlyName = true
+                 }
+             } else if param.range.overlaps(selection) && selection != param.range {
+                 // Selection is PART of a name-only parameter
+                // print("[closureCtx] Hybrid Step 1: Partial Name-Only Param -> Full Param")
+                 step1Applied = true
+                 return param.range 
+             }
+        }
+        
+        // STEP 2: Expand Full Parameter -> All Parameters
+        // Skip if we just selected a full name-only parameter (allow Step 5 to handle it)
+        if !step1Applied && !selectedFullParameterOnlyName, 
+           let paramContent = parametersContentRange, 
+           !paramContent.isEmpty, 
+           parameterRanges.contains(where: { $0.range == selection })
+        {
+            // print("[closureCtx] Hybrid Step 2: Full Param -> All Params Content")
+            return paramContent
+        }
+        
+        // STEP 3: Expand Parameter Content -> Include Parentheses
+        if let parens = parameterParenthesesRange, // Only applies if parens exist
+           let content = parametersContentRange, 
+           selection == content // Selection must exactly match the content range
+        {
+            // print("[closureCtx] Hybrid Step 3: Param Content -> Include Parens")
+             return parens
+        }
+        
+        // STEP 4: Expand Parameters/Parens -> Include Return Type
+        if let fullParamRange = fullParameterSectionRange,
+           selection == fullParamRange, 
+           let retRange = returnTypeRange, 
+           let arrow = arrowToken
+        {
+            // print("[closureCtx] Hybrid Step 4: Params/Parens -> Include Return")
+             return fullParamRange.lowerBound..<retRange.upperBound
+        }
+        
+        // STEP 5: Expand Full Signature -> Include 'in'
+        // Calculate the full signature range (start of params/parens to end of return type, or just params if no return)
+        let fullSignatureRange: Range<String.Index>? = {
+            if let fullParamRange = fullParameterSectionRange {
+                 if let retRange = returnTypeRange {
+                     return fullParamRange.lowerBound..<retRange.upperBound
+                 } else {
+                     return fullParamRange
+                 }
+            }
+            return nil
+        }()
+        
+        // Condition: Selection is the full signature OR Selection is the only name-only param
+        let selectionIsFullSignature = (fullSignatureRange != nil && selection == fullSignatureRange!)
+        let selectionIsOnlyNameOnlyParam = selectedFullParameterOnlyName && parameterRanges.count == 1 && parameterParenthesesRange == nil && returnTypeRange == nil
+
+        if selectionIsFullSignature || selectionIsOnlyNameOnlyParam 
+        {
+             let targetStartRange = selectedFullParameterOnlyName ? selection : fullSignatureRange! // Adjust target based on trigger
+            // let selDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: selection, buffer: completeBuffer)]).rawDescription
+            // let sigDesc = fullSignatureRange != nil ? Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: fullSignatureRange!, buffer: completeBuffer)]).rawDescription : "<nil>"
+            // print("[closureCtx] Hybrid Step 5: Checking selection '\(selDesc)' against sigRange '\(sigDesc)' -> Triggered: \(selectionIsFullSignature || selectionIsOnlyNameOnlyParam)") // RESTORED
+            // print("[closureCtx] Hybrid Step 5: Full Signature -> Include 'in'")
+             let resultRange = targetStartRange.lowerBound..<inToken.range.upperBound
+            // let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: resultRange, buffer: completeBuffer)]).rawDescription
+            // print("[closureCtx] Hybrid Step 5: Returning -> \(resultDesc) [Range: \(resultRange)]") // ADDED RANGE DETAIL
+             return resultRange
+        }
+
+        // --- FALLBACK --- 
+        // print("[closureCtx] Hybrid: No applicable expansion step found -> No Change")
+        return selection 
     }
     
     private func expandInGenericContext(_ selection: Range<String.Index>) -> Range<String.Index> {
@@ -464,14 +663,14 @@ public struct Buffer: Equatable {
     
     private func expandInRootContext(_ selection: Range<String.Index>) -> Range<String.Index> {
         let initialDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: selection, buffer: completeBuffer)]).rawDescription
-        print("[rootCtx] Input: \(initialDesc)")
+        // print("[rootCtx] Input: \(initialDesc)")
         // --- Cursor Expansion ---
         if selection.lowerBound == selection.upperBound {
             if let wordToken = tokens.first(where: { $0.kind == .word && ($0.range.contains(selection.lowerBound) || $0.range.upperBound == selection.lowerBound || $0.range.lowerBound == selection.lowerBound) }) {
-                 print("[rootCtx] Cursor -> Word ('\(wordToken.value)')")
+                 // print("[rootCtx] Cursor -> Word ('\(wordToken.value)')")
                  return wordToken.range
             }
-             print("[rootCtx] Cursor -> No Change")
+             // print("[rootCtx] Cursor -> No Change")
              return selection // Return cursor if no word found nearby
         }
 
@@ -482,7 +681,7 @@ public struct Buffer: Equatable {
                                                  $0.range.lowerBound <= selection.lowerBound &&
                                                  $0.range.upperBound >= selection.upperBound }) {
              if selection != containingWord.range {
-                print("[rootCtx] Prio 1 (Inside Word) -> Full Word ('\(containingWord.value)')")
+                // print("[rootCtx] Prio 1 (Inside Word) -> Full Word ('\(containingWord.value)')")
                  return containingWord.range
              }
         }
@@ -496,7 +695,7 @@ public struct Buffer: Equatable {
                 let lastWord = overlappingWords.max(by: { $0.range.upperBound < $1.range.upperBound }) {
                   let unionRange = firstWord.range.lowerBound..<lastWord.range.upperBound
                   if selection != unionRange {
-                      print("[rootCtx] Prio 2 (Overlap Words) -> Union ('\(completeBuffer[unionRange])')")
+                      // print("[rootCtx] Prio 2 (Overlap Words) -> Union ('\(completeBuffer[unionRange])')")
                       return unionRange
                   }
              }
@@ -506,15 +705,15 @@ public struct Buffer: Equatable {
         let selectionText = completeBuffer[selection]
         if selectionText.allSatisfy({ $0.isWhitespace }) {
             if let nextWord = tokens.first(where: { $0.kind == .word && $0.range.lowerBound == selection.upperBound }) {
-                 print("[rootCtx] Prio 3 (Whitespace) -> Include Next Word ('\(nextWord.value)')")
+                 // print("[rootCtx] Prio 3 (Whitespace) -> Include Next Word ('\(nextWord.value)')")
                  return selection.lowerBound..<nextWord.range.upperBound
             }
             if let prevWord = tokens.last(where: { $0.kind == .word && $0.range.upperBound == selection.lowerBound }) {
-                 print("[rootCtx] Prio 3 (Whitespace) -> Include Prev Word ('\(prevWord.value)')")
+                 // print("[rootCtx] Prio 3 (Whitespace) -> Include Prev Word ('\(prevWord.value)')")
                  return prevWord.range.lowerBound..<selection.upperBound
             }
         }
-        print("[rootCtx] Fallback -> No Change")
+        // print("[rootCtx] Fallback -> No Change")
         // Fallback: No root expansion rule applied
         return selection
     }
@@ -696,7 +895,7 @@ public struct Buffer: Equatable {
     // NEW HELPER FUNCTION for chain expansion logic
     private func expandChainBackward(_ selection: Range<String.Index>) -> Range<String.Index> {
         let initialDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: selection, buffer: completeBuffer)]).rawDescription
-        print("[chainBwd] Input: \(initialDesc)")
+        // print("[chainBwd] Input: \(initialDesc)")
         // --- Step 1 (Logic A): Handle selection of a word -> Expand back to include preceding dot/? ---
         if let selectedWordToken = tokens.first(where: { $0.kind == .word && $0.range == selection }),
            let wordIndex = tokens.firstIndex(of: selectedWordToken), wordIndex > 0 {
@@ -706,7 +905,7 @@ public struct Buffer: Equatable {
                  if gap.isEmpty || gap.allSatisfy({ $0.isWhitespace }) {
                       let result = precedingToken.range.lowerBound..<selection.upperBound
                       let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: result, buffer: completeBuffer)]).rawDescription
-                      print("[chainBwd] Logic A ('\(selectedWordToken.value)') -> Preceding Dot ('\(precedingToken.value)') -> \(resultDesc)")
+                      // print("[chainBwd] Logic A ('\(selectedWordToken.value)') -> Preceding Dot ('\(precedingToken.value)') -> \(resultDesc)")
                       return result // Result: |.word| or |?.word|
                  }
             }
@@ -727,7 +926,7 @@ public struct Buffer: Equatable {
                              // Selection is like |optional.value|. Expand to include preceding dot/?.
                              let result = precedingToken.range.lowerBound..<selection.upperBound
                              let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: result, buffer: completeBuffer)]).rawDescription
-                             print("[chainBwd] Logic B (Expand chain for dot) -> \(resultDesc)")
+                             // print("[chainBwd] Logic B (Expand chain for dot) -> \(resultDesc)")
                              return result // Result: |.optional.value| or |?.optional?.value|
                         }
                   }
@@ -745,14 +944,59 @@ public struct Buffer: Equatable {
                 if gap.isEmpty || gap.allSatisfy({$0.isWhitespace}) {
                      let result = tokenBeforeDot.range.lowerBound..<selection.upperBound
                      let resultDesc = Buffer(completeBuffer: completeBuffer, selections: [SourceTextRange(range: result, buffer: completeBuffer)]).rawDescription
-                     print("[chainBwd] Logic C ('\(completeBuffer[selection])') -> Preceding Word ('\(tokenBeforeDot.value)') -> \(resultDesc)")
+                     // print("[chainBwd] Logic C ('\(completeBuffer[selection])') -> Preceding Word ('\(tokenBeforeDot.value)') -> \(resultDesc)")
                      return result // Result: |prevWord.word| or |prevWord?.word|
                 }
             }
         }
-        print("[chainBwd] Fallback -> No Change")
+        // print("[chainBwd] Fallback -> No Change")
         // No chain expansion rule applied for this selection
         return selection
+    }
+
+    private func findMatchingBrace(startIndex: Int, tokens: [Token]) -> Token? {
+        // print("[findMatchingBrace] Start Index: \(startIndex)")
+        guard startIndex < tokens.count else { return nil }
+        let openToken = tokens[startIndex]
+        guard openToken.kind == .bracket else { 
+            // print("[findMatchingBrace] Token at start index is not a bracket: \(openToken)")
+             return nil
+        }
+        
+        let openChar = openToken.value
+        let closeChar: String
+        switch openChar {
+            case "{": closeChar = "}"
+            case "[": closeChar = "]"
+            case "(": closeChar = ")"
+            case "<": closeChar = ">"
+            default: 
+                // print("[findMatchingBrace] Not a supported opening bracket: \(openChar)")
+                 return nil
+        }
+        // print("[findMatchingBrace] Looking for '\(closeChar)' matching '\(openChar)'...")
+        
+        var depth = 0
+        // Iterate from the token *after* the starting one
+        for i in (startIndex + 1)..<tokens.count {
+            let currentToken = tokens[i]
+            // print("[findMatchingBrace] Checking token: \(currentToken.value) (\\[\(i)]) Depth: \(depth)")
+            if currentToken.kind == .bracket {
+                if currentToken.value == openChar {
+                    depth += 1
+                    // print("[findMatchingBrace] ++ Depth now \(depth)")
+                } else if currentToken.value == closeChar {
+                    if depth == 0 {
+                        // print("[findMatchingBrace] Found match at index \(i): \(currentToken)")
+                        return currentToken // Found the matching closing brace
+                    }
+                    depth -= 1
+                    // print("[findMatchingBrace] -- Depth now \(depth)")
+                }
+            }
+        }
+        // print("[findMatchingBrace] Reached end without finding match for index \(startIndex).")
+        return nil // No matching closing brace found
     }
 }
 

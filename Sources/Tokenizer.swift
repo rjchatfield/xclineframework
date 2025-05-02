@@ -31,6 +31,19 @@ public struct Tokenizer {
                 continue
             }
             
+            // Check for arrow "->"
+            if remaining.starts(with: "->") {
+                let start = index
+                let end = text.index(index, offsetBy: 2)
+                tokens.append(Token(
+                    kind: .arrow,
+                    value: "->",
+                    range: start..<end
+                ))
+                index = end
+                continue
+            }
+            
             // Skip whitespace
             if char.isWhitespace {
                 let start = index
@@ -112,6 +125,8 @@ public struct Tokenizer {
             let start = index
             while index < text.endIndex {
                 let char = text[index]
+                // Stop word if arrow starts (handle '-' case)
+                if text[index...].starts(with: "->") { break }
                 if char.isWhitespace || ",:.[]{}()<>\"?".contains(char) {
                     break
                 }
