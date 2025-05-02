@@ -128,6 +128,13 @@ public struct Buffer: Equatable {
         let genericExpansion = expandInGenericContext(selection)
         if genericExpansion != selection { return genericExpansion }
 
+        // --- Stage 2.5: Base Type Expansion ---
+        // If the selection is exactly a full generic definition (e.g., <String, Int>), 
+        // try expanding to include the base type (e.g., Dictionary<String, Int>)
+        if let baseTypeExpansion = expandBaseTypeIfGenericSelected(selection) {
+             return baseTypeExpansion
+        }
+
         // --- Stage 3: Fallback Root Context Expansion ---
         // If no specific context applied or expanded, try root logic again.
         // This might handle cases like selecting across different token types not in a specific context.
@@ -378,14 +385,62 @@ public struct Buffer: Equatable {
     }
     
     private func expandInGenericContext(_ selection: Range<String.Index>) -> Range<String.Index> {
-        // Find the generic angle brackets
-        let brackets = tokens.filter { $0.kind == .bracket && ($0.value == "<" || $0.value == ">") }
-        guard let startBracket = brackets.first(where: { $0.range.lowerBound <= selection.lowerBound }),
-              let endBracket = brackets.last(where: { $0.range.upperBound >= selection.upperBound }) else {
-            return selection
+        // 1. Find the innermost angle bracket pair enclosing the selection.
+        guard let (openBracket, closeBracket, contentRange) = findInnermostEnclosingPair(selection: selection, openChar: "<", closeChar: ">") else {
+             return selection // Not inside <> or selection doesn't allow finding a pair
         }
-        
-        return startBracket.range.lowerBound..<endBracket.range.upperBound
+        let fullRange = openBracket.range.lowerBound..<closeBracket.range.upperBound
+
+        // --- Expansion Stages within Angle Brackets ---
+
+        // Stage 4: Selection is already the full range (including brackets)
+        if selection == fullRange {
+            return selection // Cannot expand further *within* this context, main `expand` handles base type
+        }
+
+        // Stage 3: Selection is the content range (all arguments) -> Expand to include brackets
+        if selection == contentRange {
+             return fullRange
+        }
+
+        // --- Stages within the contentRange ---
+        if selection.lowerBound >= contentRange.lowerBound && selection.upperBound <= contentRange.upperBound {
+            // Identify the generic argument(s) the selection belongs to
+            let argumentRanges = findGenericArgumentRanges(within: contentRange) // Use helper
+
+            // Find which argument range(s) the selection overlaps
+            let overlappingArgs = argumentRanges.filter { $0.overlaps(selection) }
+
+            if overlappingArgs.count == 1 {
+                let argRange = overlappingArgs[0]
+                // Selection is within a single argument
+
+                // Stage 2: Selection is the full argument -> Expand to all arguments (contentRange)
+                if selection == argRange {
+                     return contentRange.isEmpty ? selection : contentRange
+                }
+
+                // Stage 1: Selection is part of the argument -> Expand to full argument
+                // (Assumes inner nested generics are handled by recursive calls or subsequent expansions)
+                // If the selection is smaller than the argument range it overlaps, expand to the full argument range.
+                return argRange
+
+            } else if overlappingArgs.count > 1 {
+                // Selection spans multiple arguments -> Expand to all arguments (contentRange)
+                 return contentRange.isEmpty ? selection : contentRange
+            } else if !contentRange.isEmpty {
+                 // Selection is in whitespace/comma between args -> Expand to all arguments
+                 return contentRange
+            }
+             return selection // Empty content range
+        }
+
+        // --- Selection touching or outside contentRange but within fullRange ---
+        if !contentRange.isEmpty {
+             return contentRange
+        }
+
+        return selection // Default fallback
     }
     
     private func expandInRootContext(_ selection: Range<String.Index>) -> Range<String.Index> {
@@ -580,6 +635,70 @@ public struct Buffer: Equatable {
          guard nameLabelRange.lowerBound < nameLabelRange.upperBound, typeRange.lowerBound < typeRange.upperBound else { return nil }
 
          return (nameLabelRange, typeRange)
+    }
+
+    // Helper to find ranges of top-level arguments within generic brackets, respecting nesting.
+    private func findGenericArgumentRanges(within contentRange: Range<String.Index>) -> [Range<String.Index>] {
+        guard !contentRange.isEmpty else { return [] }
+        var argumentRanges: [Range<String.Index>] = []
+        let relevantTokens = tokens.filter { $0.range.lowerBound >= contentRange.lowerBound && $0.range.upperBound <= contentRange.upperBound }
+        guard !relevantTokens.isEmpty else { return [] }
+
+        var currentArgStart = contentRange.lowerBound
+        var bracketDepth = 0
+
+        for token in relevantTokens {
+            if token.kind == .bracket && token.value == "<" {
+                bracketDepth += 1
+            } else if token.kind == .bracket && token.value == ">" {
+                bracketDepth -= 1
+            } else if token.kind == .comma && bracketDepth == 0 {
+                // Found a top-level comma separating arguments
+                let argEnd = token.range.lowerBound
+                // Trim trailing whitespace (optional, but good practice)
+                let trimmedEnd = completeBuffer.rangeOfCharacter(from: CharacterSet.whitespacesAndNewlines.inverted, options: .backwards, range: currentArgStart..<argEnd)?.upperBound ?? currentArgStart
+                if currentArgStart < trimmedEnd {
+                    argumentRanges.append(currentArgStart..<trimmedEnd)
+                }
+                // Start next argument after comma, trimming leading whitespace
+                let nextArgStartIndex = token.range.upperBound
+                currentArgStart = completeBuffer.rangeOfCharacter(from: CharacterSet.whitespacesAndNewlines.inverted, options: [], range: nextArgStartIndex..<contentRange.upperBound)?.lowerBound ?? contentRange.upperBound
+            }
+        }
+
+        // Add the last argument
+        let lastArgEnd = contentRange.upperBound
+        let trimmedLastEnd = completeBuffer.rangeOfCharacter(from: CharacterSet.whitespacesAndNewlines.inverted, options: .backwards, range: currentArgStart..<lastArgEnd)?.upperBound ?? currentArgStart
+        if currentArgStart < trimmedLastEnd {
+            argumentRanges.append(currentArgStart..<trimmedLastEnd)
+        }
+
+        return argumentRanges
+    }
+    
+    // After selecting the full generic part like `<String, Int>`, expand to include the base type like `Dictionary`.
+    private func expandBaseTypeIfGenericSelected(_ selection: Range<String.Index>) -> Range<String.Index>? {
+         // Check if the selection exactly matches a <...> range defined by tokens.
+         guard let firstToken = tokens.first(where: { $0.range.lowerBound == selection.lowerBound }),
+               let lastToken = tokens.last(where: { $0.range.upperBound == selection.upperBound }),
+               firstToken.kind == .bracket, firstToken.value == "<",
+               lastToken.kind == .bracket, lastToken.value == ">" else {
+             return nil // Selection is not exactly a <...> range
+         }
+
+         // Find the token immediately preceding the opening bracket.
+         if let firstBracketIndex = tokens.firstIndex(where: { $0.range.lowerBound == selection.lowerBound }),
+            firstBracketIndex > 0 {
+              let precedingToken = tokens[firstBracketIndex - 1]
+              // Check if the preceding token is a word (the base type name).
+              // Also check if it's directly adjacent (no whitespace tokens in between)? Assumed for now.
+              if precedingToken.kind == .word && precedingToken.range.upperBound == firstToken.range.lowerBound {
+                   // Expand to include the base type name.
+                   return precedingToken.range.lowerBound..<selection.upperBound
+              }
+         }
+
+         return nil // No preceding base type found or not adjacent
     }
 
     private func tokens(in range: Range<String.Index>) -> [Token] {
